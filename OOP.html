@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<body>
+    <div class="container">
+        <h1>OOP</h1>
+        <button class="myBtn" onclick="run()">
+            Click here
+        </button>
+    </div>
+
+    <script>
+        function createObject1() {
+            const user = {
+                name: "Alex",
+                getName: function () {
+                    return this.name;
+                }
+            }
+            console.log(user);
+            console.log(user.getName());
+        }
+
+        function createObject2() {
+            let User = function () {
+                this.name = "Alex"
+            }
+            User.prototype.getName = function () {
+                return this.name;
+            }
+            let userInstance = new User();
+            console.log(userInstance);
+            console.log(userInstance.getName());
+
+        }
+
+        function createObject3() {
+            function DogObject(name, age) {
+                let dog = Object.create(constructorObject);
+                dog.name = name;
+                dog.age = age;
+                dog.leg = 4;
+                return dog;
+            }
+            let constructorObject = {
+                speak: function () {
+                    return "I am a dog";
+                }
+            }
+            let bingo = DogObject("Bingo", 54);
+            console.log(bingo);
+        }
+
+        function createObject4() {
+            class Animals {
+                constructor(name, specie) {
+                    this.name = name;
+                    this.specie = specie;
+                }
+
+                leg = 4;
+
+                sing() {
+                    return `${this.name} sings`;
+                }
+
+                dance() {
+                    return this.name + " can dance";
+                }
+            }
+            let bingo = new Animals("Bingo", "Hairy");
+            console.log(bingo);
+            console.log(bingo.sing());
+            console.log(bingo.dance());
+        }
+
+        function createSubClass() {
+            class Animals {
+                constructor(name, age) {
+                    this.name = name;
+                    this.age = age;
+                }
+                sing() {
+                    return `${this.name} can sing`;
+                }
+                dance() {
+                    return `${this.name} can dance`;
+                }
+            }
+            class Cats extends Animals {
+                constructor(name, age, whiskerColor) {
+                    super(name, age);
+                    this.whiskerColor = whiskerColor;
+                }
+                sing() {
+                    return `${this.name} can meow`;
+                }
+                whiskers() {
+                    return `I have ${this.whiskerColor} whiskers`;
+                }
+            }
+            let clara = new Cats("Clara", 33, "indigo");
+            console.log(clara);
+            console.log(clara.sing());
+            console.log(clara.whiskers());
+        }
+
+        function createSubClassProto() {
+            let Person = function (name, id) {
+                this.name = name;
+                this.id = id;
+            }
+            Person.prototype.getName = function () {
+                return this.name;
+            }
+            let aiden = new Person("Aiden", 123);
+            console.log(aiden);
+            console.log(aiden.getName());
+
+            let Employee = function (name, id, salary) {
+                Person.call(this, name, id);
+                this.salary = salary;
+            }
+            Object.setPrototypeOf(Employee, Person.prototype);
+            Employee.prototype.employeeInfo = function () {
+                return `${this.name} :: ${this.id} :: ${this.salary}`;
+            }
+            let aaron = new Employee('aaron', 234, 15);
+            console.log(aaron);
+            console.log(aaron.employeeInfo());
+        }
+
+        function run() {
+            createSubClassProto();
+        }
+    </script>
+</body>
+
+</html>
+
+</html>
