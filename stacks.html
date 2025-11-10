@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<body>
+    <div class="container">
+        <h1>stacks</h1>
+
+        <button class="myBtn" onclick="run()">
+            Click here
+        </button>
+    </div>
+
+    <script>
+        function createStackObject() {
+            // Stack implementation using ES6 class
+            class Stack {
+                constructor() {
+                    this.items = [];
+                }
+
+                // Push element to the top of the stack
+                push(element) {
+                    this.items.push(element);
+                }
+
+                // Pop element from the top of the stack
+                pop() {
+                    if (this.isEmpty()) {
+                        return "Stack is empty";
+                    }
+                    return this.items.pop();
+                }
+
+                // Peek at the top element without removing it
+                peek() {
+                    if (this.isEmpty()) {
+                        return "Stack is empty";
+                    }
+                    return this.items[this.items.length - 1];
+                }
+
+                // Check if stack is empty
+                isEmpty() {
+                    return this.items.length === 0;
+                }
+
+                // Get the size of the stack
+                size() {
+                    return this.items.length;
+                }
+
+                // Display the stack
+                display() {
+                    return this.items.toString();
+                }
+            }
+
+            // Create a new stack instance
+            let stack = new Stack();
+
+            // Demonstrate stack operations
+            console.log("Creating a new stack...");
+            console.log("Is stack empty?", stack.isEmpty());
+
+            stack.push(10);
+            stack.push(20);
+            stack.push(30);
+            console.log("After pushing 10, 20, 30:");
+            console.log("Stack:", stack.display());
+            console.log("Stack size:", stack.size());
+            console.log("Top element (peek):", stack.peek());
+
+            console.log("Popped:", stack.pop());
+            console.log("Stack after pop:", stack.display());
+            console.log("Top element (peek):", stack.peek());
+            stack.push(40);
+            console.log("Top element (peek):", stack.peek());
+
+            return stack;
+        }
+
+        function createStackObject2() {
+            // Stack implementation using ES6 class (without native push/pop)
+            class Stack {
+                constructor() {
+                    this.items = [];
+                    this.top = -1; // Track the top index
+                }
+
+                // Push element to the top of the stack (without using push)
+                push(element) {
+                    this.top++;
+                    this.items[this.top] = element;
+                }
+
+                // Pop element from the top of the stack (without using pop)
+                pop() {
+                    if (this.isEmpty()) {
+                        return "Stack is empty";
+                    }
+                    const element = this.items[this.top];
+                    this.items[this.top] = undefined; // Clear the element
+                    this.top--;
+                    return element;
+                }
+
+                // Peek at the top element without removing it
+                peek() {
+                    if (this.isEmpty()) {
+                        return "Stack is empty";
+                    }
+                    return this.items[this.top];
+                }
+
+                // Check if stack is empty
+                isEmpty() {
+                    return this.top === -1;
+                }
+
+                // Get the size of the stack
+                size() {
+                    return this.top + 1;
+                }
+
+                // Display the stack
+                display() {
+                    let result = [];
+                    for (let i = 0; i <= this.top; i++) {
+                        result[result.length] = this.items[i];
+                    }
+                    return result.toString();
+                }
+            }
+
+            // Create a new stack instance
+            let stack = new Stack();
+
+            // Demonstrate stack operations
+            console.log("Creating a new stack (without native push/pop)...");
+            console.log("Is stack empty?", stack.isEmpty());
+
+            stack.push(10);
+            stack.push(20);
+            stack.push(30);
+            console.log("After pushing 10, 20, 30:");
+            console.log("Stack:", stack.display());
+            console.log("Stack size:", stack.size());
+            console.log("Top element (peek):", stack.peek());
+
+            console.log("Popped:", stack.pop());
+            console.log("Stack after pop:", stack.display());
+            console.log("Top element (peek):", stack.peek());
+            stack.push(40);
+            console.log("After pushing 40:");
+            console.log("Top element (peek):", stack.peek());
+
+            return stack;
+        }
+
+        function run() {
+            createStackObject2();
+        }
+    </script>
+</body>
+
+</html>
+
+</html>
