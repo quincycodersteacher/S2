@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<body>
+    <div class="container">
+        <h1>Elevator</h1>
+
+        <button class="myBtn" onclick="run()">
+            Click here
+        </button>
+    </div>
+
+    <script>
+        class Elevator {
+            constructor(speed, capacity, loadingTime, people, currentFloor, destinationFloor, getNextDestination, getPeopleOnFloor) {
+                this.speed = speed; // in floors per second
+                this.capacity = capacity; // in number of people
+                this.loadingTime = loadingTime; // in seconds
+                this.people = people; // current list of people
+                this.currentFloor = currentFloor; // current floor
+                this.destinationFloor = destinationFloor; // destination floor
+                this.getNextDestination = getNextDestination; // function to get next destination floor
+                this.getPeopleOnFloor = getPeopleOnFloor; // function to get number of people on a floor
+            }
+        }
+
+        class Building {
+            constructor(floors, elevator) {
+                this.floors = floors; // total number of floors
+                this.elevator = elevator; // elevator instance
+            }
+            getFloor(floorNumber) {
+                return this.floors.find(floor => floor.floorNumber === floorNumber);
+            }
+            getNumberFloors() {
+                return this.floors.length;
+            }
+            generatePeopleRandomly(numPeople) {
+                const names = ["Alice", "Bob", "Charlie", "David", "Eve", "Frank", "Grace", "Hannah"];
+                for (let i = 0; i < numPeople; i++) {
+                    const name = names[Math.floor(Math.random() * names.length)];
+                    const originFloor = Math.floor(Math.random() * this.getNumberFloors());
+                    let destinationFloor;
+                    do {
+                        destinationFloor = Math.floor(Math.random() * this.getNumberFloors());
+                    } while (destinationFloor === originFloor);
+                    const person = new Person(name, originFloor, destinationFloor);
+                    this.getFloor(originFloor).addPerson(person);
+                }
+            }
+        }
+        
+        class Person {
+            constructor(name, originFloor, destinationFloor) {
+                this.name = name; // in pounds
+                this.originFloor = originFloor; // origin floor
+                this.destinationFloor = destinationFloor; // destination floor
+            }
+            equals(otherPerson) {
+                return this.name === otherPerson.name;
+            }
+        }
+
+        class Floor {
+            constructor(floorNumber, peopleWaiting) {
+                this.floorNumber = floorNumber; // floor number
+                this.peopleWaiting = peopleWaiting; // array of Person instances waiting on this floor
+            }
+            getPeopleOnFloor() {
+                return this.peopleWaiting.length;
+            }
+            addPerson(person) {
+                this.peopleWaiting.push(person);
+            }
+            removePerson(person) {
+                this.peopleWaiting = this.peopleWaiting.filter(p => p !== person);
+            }
+        }
+
+        function run() {
+        }
+    </script>
+</body>
+
+</html>
+
+</html>
