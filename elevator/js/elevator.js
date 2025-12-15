@@ -12,22 +12,25 @@ class Person {
 }
 
 class Elevator {
-    constructor(speed, capacity, loadingTime, people, currentFloor, destinationFloor, getNextDestination, getPeopleOnFloor) {
-        this.speed = speed; // in floors per second
+    constructor(capacity, loadingTime) {
         this.capacity = capacity; // in number of people
         this.loadingTime = loadingTime; // in seconds
-        this.people = people; // current list of people
-        this.currentFloor = currentFloor; // current floor
-        this.destinationFloor = destinationFloor; // destination floor
-        this.getNextDestination = getNextDestination; // function to get next destination floor
-        this.getPeopleOnFloor = getPeopleOnFloor; // function to get number of people on a floor
+        this.people = []; // current list of people
+        this.currentFloor = 0; // current floor
+        this.destinationFloor = 0; // destination floor
+    }
+}
+
+class RegularElevator extends Elevator {
+    constructor() {
+        super(4, 3); //4 people and 3 seconds to load
     }
 }
 
 class Floor {
     constructor(floorNumber) {
         this.floorNumber = floorNumber; // floor number
-        this.people = new Queue();
+        this.people = [];
     }
     getPeopleOnFloor() {
         return this.people.length;
@@ -50,7 +53,7 @@ class Building {
             this.floors.push(new Floor(i));
         }
         for (let i = 0; i < numElevators; i++) {
-            //this.elevators.push(new Elevator(1, 5, 2, [], 0, 0, () => { }, () => { }));
+            this.elevators.push(new RegularElevator());
         }
     }
     getFloor(floorNumber) {
@@ -59,6 +62,10 @@ class Building {
     getNumberFloors() {
         return this.floors.length;
     }
+    /**
+     * @description Generates people and places them on random floors in the building.
+     * @param {number} numPeople - The number of people to generate and place in the building.
+     */
     generatePeopleRandomly(numPeople) {
         const names = ["a", "b", "c", "d", "e", "f", "g", "h"];
         for (let i = 0; i < numPeople; i++) {
@@ -81,10 +88,18 @@ class Simulation {
         this.peoplePerSecond = peoplePerSecond; // number of people entering the building per second
 
         // create the Building instance
-        this.building = new Building(this.numElevators, this.numFloors)
+        this.building = new Building(this.numElevators, this.numFloors);
+    }
+    step() {
+        // Implement the logic to simulate one step of the simulation
+        // generate people randomly
+        this.building.generatePeopleRandomly(this.peoplePerSecond);
+        // update the state of the building and elevators
+        // check if all people have reached their destination
+        console.log(this.building);
     }
     run() {
-        // Implement the logic to run the simulation
+        setInterval(() => this.step(), 1000);
     }
 }
 

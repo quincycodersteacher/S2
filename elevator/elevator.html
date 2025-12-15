@@ -15,7 +15,9 @@
         import { Simulation } from './js/elevator.js';
 
         function run() {
+            // Create a new simulation with 2 elevators, 3 floors, and 1 new person per second in each floor
             let sim = new Simulation(2, 3, 1);
+            sim.run();
         }
 
         window.run = run;
