@@ -1,4 +1,4 @@
-import ElevatorQueue, { FloorQueue } from './queue.js';
+import { ElevatorQueue, FloorQueue } from './queue.js';
 
 class Person {
     constructor(name, originFloor, destinationFloor) {
@@ -47,11 +47,15 @@ class Elevator {
     }
 
     getNextDestinationFloor() {
+        if (this.queue.isEmpty()) {
+            //no one in elevator, so next destination floor is the current floor
+            return this.currentFloor;
+        }
         return this.queue.peek().destinationFloor; // get the destination floor of the next person in the queue
     }
 
     getNextDirection() {
-        nextDestinationFloor = this.getNextDestinationFloor();
+        let nextDestinationFloor = this.getNextDestinationFloor();
         if (nextDestinationFloor > this.currentFloor) {
             return DIRECTION.UP;
         } else {
