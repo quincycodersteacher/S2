@@ -107,7 +107,8 @@ class Elevator {
             if (!this.unLoadPeople()) {
                 //no one to unload, so need to load people
                 if (!this.loadPeople()) {
-                    //no one to load
+                    //no one to load, so set the next destination floor and return
+                    this.destinationFloor = this.getNextDestinationFloor();
                     return;
                 }
             }
@@ -201,9 +202,27 @@ class Simulation {
         // move elevators to their destination floors
         // load and unload people from the elevators
         this.building.moveElevatorsAndLoad();
+        this.animate();
     }
     run() {
         setInterval(() => this.step(), 1000);
+    }
+    animate() {
+        console.clear();
+        for (let f = this.numFloors - 1; f >= 0; f--) {
+            let line = `Floor ${f}: `;
+            for (let e of this.building.elevators) {
+                if (e.currentFloor === f) {
+                    line += '[E] ';
+                } else {
+                    line += '[ ] ';
+                }
+            }
+            const floor = this.building.getFloor(f);
+            const peopleWaiting = floor.getPeopleOnFloor();
+            line += `(${peopleWaiting})`;
+            console.log(line);
+        }
     }
 }
 
