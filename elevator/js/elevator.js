@@ -217,6 +217,7 @@ class Simulation {
         this.timer = 0;
         // create the Building instance
         this.isRunning = false;
+        this.intervalId = null; // to store the interval ID for pausing
         this.building = new Building(this.numElevators, this.numFloors);
     }
     step() {
@@ -239,12 +240,14 @@ class Simulation {
         }
     }
     run() {
-        setInterval(() => this.step(), 1000);
+        this.intervalId = setInterval(() => this.step(), 1000);
         this.isRunning = true;
     }
     pause() {
-        // Implement the logic to pause the simulation
-
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
         this.isRunning = false;
     }
     animate() {
