@@ -210,7 +210,7 @@ class Building {
 }
 
 class Simulation {
-    constructor(numElevators, numFloors, peoplePerSecond) {
+    constructor(numElevators, numFloors, peoplePerSecond, canvas) {
         this.numElevators = numElevators; // number of elevators in the building
         this.numFloors = numFloors; // number of floors in the building
         this.peoplePerSecond = peoplePerSecond; // number of people entering the building per second
@@ -218,6 +218,8 @@ class Simulation {
         // create the Building instance
         this.isRunning = false;
         this.intervalId = null; // to store the interval ID for pausing
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
         this.building = new Building(this.numElevators, this.numFloors);
     }
     step() {
@@ -230,7 +232,10 @@ class Simulation {
         // move elevators to their destination floors
         // load and unload people from the elevators
         this.building.moveElevatorsAndLoad();
-        this.animate();
+        //this.animate();
+        if (this.canvas) {
+            this.animateCanvas();
+        }
     }
     toggleRun() {
         if (this.isRunning) {
@@ -270,6 +275,61 @@ class Simulation {
         }
         console.log(`Timer: ${this.timer}`);
     }
-}
 
+    animateCanvas() {
+        this.timer++;
+        const ctx = this.ctx;
+        const canvas = this.canvas;
+        const floorHeight = canvas.height / this.numFloors;
+        const elevatorWidth = 150;
+        const elevatorStartX = canvas.width - elevatorWidth * this.numElevators;
+        const personRadius = 10;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw floors
+        for (let f = 0; f < this.numFloors; f++) {
+            const y = canvas.height - (f + 1) * floorHeight;
+            ctx.strokeRect(0, y, canvas.width, floorHeight);
+            ctx.fillText(`Floor ${f}`, 10, y + floorHeight / 2);
+        }
+
+        // Draw elevators
+        for (let i = 0; i < this.building.elevators.length; i++) {
+            const elevator = this.building.elevators[i];
+            const x = elevatorStartX + i * elevatorWidth;
+            const y = canvas.height - (elevator.currentFloor + 1) * floorHeight;
+            ctx.strokeRect(x, y, elevatorWidth, floorHeight);
+            // Draw elevator destination
+            ctx.fillText(`Dest: ${elevator.destinationFloor}`, x + 5, y + 20);
+            // Draw people in elevator
+            let personX = x + 10;
+            for (let p of elevator.queue.people) {
+                ctx.beginPath();
+                ctx.arc(personX, y + floorHeight / 2, personRadius, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillText(p.destinationFloor.toString(), personX - 5, y + floorHeight / 2 + 30);
+                personX += 25;
+            }
+        }
+
+        // Draw people on floors
+        for (let f = 0; f < this.numFloors; f++) {
+            const floor = this.building.getFloor(f);
+            const y = canvas.height - (f + 1) * floorHeight + floorHeight / 2;
+            let personX = 100;
+            for (let p of floor.queue.people) {
+                ctx.beginPath();
+                ctx.arc(personX, y, personRadius, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillText(p.destinationFloor.toString(), personX - 5, y + 25);
+                personX += 25;
+            }
+        }
+
+        // Draw timer
+        ctx.fillText(`Timer: ${this.timer}`, 10, 20);
+    }
+}
 export { Simulation };
