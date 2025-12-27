@@ -48,8 +48,16 @@ class Elevator {
 
     getNextDestinationFloor() {
         if (this.queue.isEmpty()) {
-            //no one in elevator, so next destination floor is the current floor
-            return this.currentFloor;
+            //no one in elevator, so scan floors to find next destination
+            for (let floor of this.floors) {
+                if (floor.floorNumber === this.currentFloor) {
+                    continue; //skip current floor
+                }
+                //currently returns first floor found with button pressed. this could be improved
+                if (floor.upButtonPressed || floor.downButtonPressed) {
+                    return floor.floorNumber;
+                }
+            }
         }
         return this.queue.peek().destinationFloor; // get the destination floor of the next person in the queue
     }
@@ -127,6 +135,8 @@ class Floor {
     constructor(floorNumber) {
         this.floorNumber = floorNumber; // floor number
         this.queue = new FloorQueue();
+        this.upButtonPressed = false;
+        this.downButtonPressed = false;
     }
     getPeopleOnFloor() {
         return this.queue.size();
@@ -135,6 +145,19 @@ class Floor {
         this.queue.enqueue(person);
     }
     removePerson(person) {
+    }
+    pressButtons() {
+        this.upButtonPressed = false;
+        this.downButtonPressed = false;
+        if (!this.queue.isEmpty()) {
+            for (let p of this.queue.people) {
+                if (p.destinationFloor > this.floorNumber) {
+                    this.upButtonPressed = true;
+                } else if (p.destinationFloor < this.floorNumber) {
+                    this.downButtonPressed = true;
+                }
+            }
+        }
     }
 }
 
@@ -191,38 +214,58 @@ class Simulation {
         this.numElevators = numElevators; // number of elevators in the building
         this.numFloors = numFloors; // number of floors in the building
         this.peoplePerSecond = peoplePerSecond; // number of people entering the building per second
-
+        this.timer = 0;
         // create the Building instance
+        this.isRunning = false;
         this.building = new Building(this.numElevators, this.numFloors);
     }
     step() {
         // Implement the logic to simulate one step of the simulation
         // generate people randomly
         this.building.generatePeopleRandomly(this.peoplePerSecond);
+        for (let floor of this.building.floors) {
+            floor.pressButtons();
+        }
         // move elevators to their destination floors
         // load and unload people from the elevators
         this.building.moveElevatorsAndLoad();
         this.animate();
     }
+    toggleRun() {
+        if (this.isRunning) {
+            this.pause();
+        } else {
+            this.run();
+        }
+    }
     run() {
         setInterval(() => this.step(), 1000);
+        this.isRunning = true;
+    }
+    pause() {
+        // Implement the logic to pause the simulation
+
+        this.isRunning = false;
     }
     animate() {
         console.clear();
+        this.timer++;
         for (let f = this.numFloors - 1; f >= 0; f--) {
             let line = `Floor ${f}: `;
             for (let e of this.building.elevators) {
                 if (e.currentFloor === f) {
-                    line += '[E] ';
+                    const dests = e.queue.people.map(p => p.destinationFloor).join(' ');
+                    line += `[${dests}] `;
                 } else {
                     line += '[ ] ';
                 }
             }
             const floor = this.building.getFloor(f);
-            const peopleWaiting = floor.getPeopleOnFloor();
-            line += `(${peopleWaiting})`;
+            const dests = floor.queue.people.map(p => p.destinationFloor).join(' ');
+            line += `(${dests})`;
             console.log(line);
         }
+        console.log(`Timer: ${this.timer}`);
     }
 }
 
