@@ -19,7 +19,7 @@
         function run() {
             if (!sim) {
                 // Create a new simulation with 1 elevator, 3 floors, and 1 new person per second in each floor
-                sim = new Simulation(1, 3, 1, document.getElementById('elevatorCanvas'));
+                sim = new Simulation(2, 3, 1, document.getElementById('elevatorCanvas'));
             }
             sim.toggleRun();
         }

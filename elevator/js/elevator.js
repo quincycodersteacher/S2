@@ -304,13 +304,23 @@ class Simulation {
             // Draw elevator destination
             ctx.fillText(`Dest: ${elevator.destinationFloor}`, x + 5, y + 20);
             // Draw people in elevator
-            let personX = x + 10;
-            for (let p of elevator.queue.people) {
-                ctx.beginPath();
-                ctx.arc(personX, y + floorHeight / 2, personRadius, 0, 2 * Math.PI);
-                ctx.fill();
-                ctx.fillText(p.destinationFloor.toString(), personX - 5, y + floorHeight / 2 + 30);
-                personX += 25;
+            const people = elevator.queue.people;
+            const numRows = 2;
+            const peoplePerRow = 2;
+            for (let row = 0; row < numRows; row++) {
+                for (let col = 0; col < peoplePerRow; col++) {
+                    const index = row * peoplePerRow + col;
+                    if (index >= people.length) break;
+                    const p = people[index];
+                    const personX = x + 10 + col * 25;
+                    const personY = y + floorHeight / 2 - 15 + row * 30;
+                    ctx.beginPath();
+                    ctx.arc(personX, personY, personRadius, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(p.destinationFloor.toString(), personX - 3, personY + 3);
+                    ctx.fillStyle = 'black';
+                }
             }
         }
 
@@ -318,13 +328,23 @@ class Simulation {
         for (let f = 0; f < this.numFloors; f++) {
             const floor = this.building.getFloor(f);
             const y = canvas.height - (f + 1) * floorHeight + floorHeight / 2;
-            let personX = 100;
-            for (let p of floor.queue.people) {
-                ctx.beginPath();
-                ctx.arc(personX, y, personRadius, 0, 2 * Math.PI);
-                ctx.fill();
-                ctx.fillText(p.destinationFloor.toString(), personX - 5, y + 25);
-                personX += 25;
+            const people = floor.queue.people;
+            const numRows = 2;
+            const peoplePerRow = Math.ceil(people.length / numRows);
+            for (let row = 0; row < numRows; row++) {
+                for (let col = 0; col < peoplePerRow; col++) {
+                    const index = row * peoplePerRow + col;
+                    if (index >= people.length) break;
+                    const p = people[index];
+                    const personX = 100 + col * 25;
+                    const personY = y - 15 + row * 30;
+                    ctx.beginPath();
+                    ctx.arc(personX, personY, personRadius, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(p.destinationFloor.toString(), personX - 3, personY + 3);
+                    ctx.fillStyle = 'black';
+                }
             }
         }
 
