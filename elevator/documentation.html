@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elevator Simulation Project Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #333;
+        }
+
+        ul {
+            list-style-type: disc;
+            margin-left: 20px;
+        }
+
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Elevator Simulation Project Documentation</h1>
+    <p>This documentation provides a comprehensive summary of the classes and methods in the elevator simulation
+        project. It is designed to allow a student to understand the functionality and recreate the project
+        independently. The project simulates an elevator system in a building, including people moving between floors,
+        elevator logic, and a visual representation on a canvas.</p>
+
+    <p>The project consists of three main files:</p>
+    <ul>
+        <li><code>elevator.html</code>: The HTML file that sets up the canvas and runs the simulation.</li>
+        <li><code>js/elevator.js</code>: Contains the core classes for the simulation (Person, Elevator, Floor,
+            Building, Simulation).</li>
+        <li><code>js/queue.js</code>: Contains queue-related classes (Queue, FloorQueue, ElevatorQueue).</li>
+    </ul>
+
+    <p>Below is a detailed breakdown of each class, including its purpose, properties, and methods. The classes are
+        presented in the recommended build order to minimize dependencies and build complexity incrementally.</p>
+
+    <h2>Step-by-Step Class Implementation</h2>
+    <p>To recreate the project, implement the classes in the following order based on their dependencies. Each class
+        includes an explanation of why it should be built at that step and what comes next.</p>
+
+    <h3>1. Person Class</h3>
+    <p><strong>Why build this first:</strong> The Person class has no dependencies and represents the fundamental entity
+        (people) that will be managed throughout the simulation. It's a simple data holder that other classes will
+        reference.</p>
+    <p><strong>Next:</strong> After Person, build the Queue class, as queues are needed to manage collections of people.
+    </p>
+    <p>Represents an individual person in the simulation.</p>
+    <h4>Properties:</h4>
+    <ul>
+        <li><code>name</code>: A string identifier for the person (e.g., "a", "b").</li>
+        <li><code>originFloor</code>: The floor number where the person starts.</li>
+        <li><code>destinationFloor</code>: The floor number where the person wants to go.</li>
+    </ul>
+    <h4>Methods:</h4>
+    <ul>
+        <li><code>constructor(name, originFloor, destinationFloor)</code>: Initializes a new Person with the given name,
+            origin floor, and destination floor.</li>
+        <li><code>equals(otherPerson)</code>: Checks if this person is equal to another based on name. Returns a
+            boolean.</li>
+    </ul>
+    <h5>Testing Ideas</h5>
+    <ul>
+        <li>Test constructor:
+            <code>let p = new Person('a', 0, 2); console.assert(p.name === 'a' && p.originFloor === 0 && p.destinationFloor === 2);</code>
+        </li>
+        <li>Test equals:
+            <code>let p1 = new Person('a', 0, 1); let p2 = new Person('a', 1, 2); console.assert(p1.equals(p2) === true); let p3 = new Person('b', 0, 1); console.assert(p1.equals(p3) === false);</code>
+        </li>
+    </ul>
+
+    <h3>2. Queue Class</h3>
+    <p><strong>Why build this next:</strong> Queues are fundamental data structures used to manage ordered collections
+        of people in floors and elevators. Build this after Person since it will hold Person instances.</p>
+    <p><strong>Next:</strong> Build FloorQueue, which extends Queue for floor-specific logic.</p>
+    <p>A basic queue data structure for managing people.</p>
+    <h4>Properties:</h4>
+    <ul>
+        <li><code>people</code>: An array holding the queued elements.</li>
+    </ul>
+    <h4>Methods:</h4>
+    <ul>
+        <li><code>constructor()</code>: Initializes an empty queue.</li>
+        <li><code>enqueue(element)</code>: Adds an element to the end of the queue.</li>
+        <li><code>dequeue()</code>: Removes and returns the first element, or null if empty.</li>
+        <li><code>peek()</code>: Returns the first element without removing it, or null if empty.</li>
+        <li><code>isEmpty()</code>: Returns true if the queue has no elements.</li>
+        <li><code>size()</code>: Returns the number of elements in the queue.</li>
+    </ul>
+    <h5>Testing Ideas</h5>
+    <ul>
+        <li>Test constructor and isEmpty:
+            <code>let q = new Queue(); console.assert(q.isEmpty() === true && q.size() === 0);</code></li>
+        <li>Test enqueue and dequeue:
+            <code>q.enqueue('a'); q.enqueue('b'); console.assert(q.size() === 2 && q.dequeue() === 'a' && q.size() === 1);</code>
+        </li>
+        <li>Test peek: <code>console.assert(q.peek() === 'b' && q.size() === 1);</code></li>
+    </ul>
+
+    <h3>3. FloorQueue Class</h3>
+    <p><strong>Why build this next:</strong> FloorQueue extends Queue to provide floor-specific dequeue methods for
+        handling people based on their destination relative to the floor. It depends on Queue.</p>
+    <p><strong>Next:</strong> Build ElevatorQueue, which also extends Queue for elevator-specific logic.</p>
+    <p>A specialized queue for floors, extending Queue.</p>
+    <h4>Methods:</h4>
+    <ul>
+        <li>Inherits constructor from Queue.</li>
+        <li><code>dequeueNextWithDestinationAbove(floor)</code>: Removes and returns the first person whose destination
+            is above the given floor, or null if none.</li>
+        <li><code>dequeueNextWithDestinationBelow(floor)</code>: Removes and returns the first person whose destination
+            is below the given floor, or null if none.</li>
+    </ul>
+    <h5>Testing Ideas</h5>
+    <ul>
+        <li>Test dequeueNextWithDestinationAbove:
+            <code>let fq = new FloorQueue(); let p1 = new Person('a', 0, 2); let p2 = new Person('b', 0, 1); fq.enqueue(p1); fq.enqueue(p2); console.assert(fq.dequeueNextWithDestinationAbove(0) === p1 && fq.size() === 1);</code>
+        </li>
+        <li>Test dequeueNextWithDestinationBelow:
+            <code>console.assert(fq.dequeueNextWithDestinationBelow(0) === p2);</code></li>
+    </ul>
+
+    <h3>4. ElevatorQueue Class</h3>
+    <p><strong>Why build this next:</strong> ElevatorQueue extends Queue to dequeue people based on their exact
+        destination floor, used in elevators. It depends on Queue.</p>
+    <p><strong>Next:</strong> Define the DIRECTION constants, as they are used in the Elevator class.</p>
+    <p>A specialized queue for elevators, extending Queue.</p>
+    <h4>Methods:</h4>
+    <ul>
+        <li>Inherits constructor from Queue.</li>
+        <li><code>dequeue(floor)</code>: Removes and returns the first person whose destination matches the given floor,
+            or null if none.</li>
+    </ul>
+    <h5>Testing Ideas</h5>
+    <ul>
+        <li>Test dequeue by floor:
+            <code>let eq = new ElevatorQueue(); let p1 = new Person('a', 0, 2); let p2 = new Person('b', 0, 1); eq.enqueue(p1); eq.enqueue(p2); console.assert(eq.dequeue(1) === p2 && eq.size() === 1);</code>
+        </li>
+    </ul>
+
+    <h3>5. Constants</h3>
+    <p><strong>Why build this next:</strong> The DIRECTION constants define UP and DOWN values used in elevator movement
+        logic. Define these before Elevator since it references them.</p>
+    <p><strong>Next:</strong> Build the Floor class, which uses FloorQueue.</p>
+    <ul>
+        <li><code>DIRECTION</code>: An object with UP (100) and DOWN (200) constants for elevator direction.</li>
+    </ul>
+    <h5>Testing Ideas</h5>
+    <ul>
+        <li>Test constants: <code>console.assert(DIRECTION.UP === 100 && DIRECTION.DOWN === 200);</code></li>
+    </ul>
+
+    <h3>6. Floor Class</h3>
+    <p><strong>Why build this next:</strong> The Floor class represents individual floors in the building and uses
+        FloorQueue to manage waiting people. It depends on FloorQueue and Person.</p>
+    <p><strong>Next:</strong> Build the Elevator class, which interacts with floors and uses ElevatorQueue.</p>
+    <p>Represents a floor in the building, managing people waiting and button presses.</p>
+    <h4>Properties:</h4>
+    <ul>
+        <li><code>floorNumber</code>: The number of the floor.</li>
+        <li><code>queue</code>: A FloorQueue instance holding people waiting on this floor.</li>
+        <li><code>upButtonPressed</code>: Boolean indicating if the up button is pressed.</li>
+        <li><code>downButtonPressed</code>: Boolean indicating if the down button is pressed.</li>
+    </ul>
+    <h4>Methods:</h4>
+    <ul>
+        <li><code>constructor(floorNumber)</code>: Initializes the floor with the given floor number.</li>
+        <li><code>getPeopleOnFloor()</code>: Returns the number of people on the floor.</li>
+        <li><code>addPerson(person)</code>: Adds a person to the floor's queue.</li>
+        <li><code>removePerson(person)</code>: (Not implemented in the code.)</li>
+        <li><code>pressButtons()</code>: Updates the button states based on the destinations of people in the queue.
+            Sets upButtonPressed if anyone wants to go up, downButtonPressed if anyone wants to go down.</li>
+    </ul>
+    <h5>Testing Ideas</h5>
+    <ul>
+        <li>Test constructor:
+            <code>let f = new Floor(0); console.assert(f.floorNumber === 0 && f.queue.isEmpty() === true);</code></li>
+        <li>Test addPerson and getPeopleOnFloor:
+            <code>let p = new Person('a', 0, 1); f.addPerson(p); console.assert(f.getPeopleOnFloor() === 1);</code></li>
+        <li>Test pressButtons:
+            <code>f.pressButtons(); console.assert(f.upButtonPressed === true && f.downButtonPressed === false);</code>
+        </li>
+    </ul>
+
+    <h3>7. Elevator Class</h3>
+    <p><strong>Why build this next:</strong> The Elevator class handles elevator movement, loading/unloading passengers,
+        and destination logic. It depends on ElevatorQueue, Floor (for floors array), and DIRECTION constants.</p>
+    <p><strong>Next:</strong> Build RegularElevator, a subclass of Elevator with fixed capacity.</p>
+    <p>The base class for elevators, handling movement, loading/unloading passengers, and destination logic.</p>
+    <h4>Properties:</h4>
+    <ul>
+        <li><code>capacity</code>: The maximum number of people the elevator can hold.</li>
+        <li><code>floors</code>: An array of Floor objects representing the building's floors.</li>
+        <li><code>queue</code>: An ElevatorQueue instance holding the people currently in the elevator.</li>
+        <li><code>currentFloor</code>: The floor the elevator is currently on.</li>
+        <li><code>destinationFloor</code>: The floor the elevator is heading to.</li>
+    </ul>
+    <h4>Methods:</h4>
+    <ul>
+        <li><code>constructor(capacity, floors)</code>: Initializes the elevator with the given capacity and array of
+            floors.</li>
+        <li><code>isFull()</code>: Returns true if the elevator has reached its capacity, false otherwise.</li>
+        <li><code>move()</code>: Moves the elevator one floor towards its destination. Returns true if it moved, false
+            if already at destination.</li>
+        <li><code>getNextDestinationFloor()</code>: Determines the next floor the elevator should go to. If empty, scans
+            floors for pressed buttons; otherwise, uses the next person's destination.</li>
+        <li><code>getNextDirection()</code>: Returns the direction (UP or DOWN) based on the next destination floor.
+        </li>
+        <li><code>unLoadPeople()</code>: Removes people from the elevator who have reached their destination floor.
+            Returns true if someone was unloaded, false otherwise.</li>
+        <li><code>loadPeople()</code>: Loads people from the current floor into the elevator if space is available and
+            they are going in the elevator's direction. Returns true if someone was loaded, false otherwise.</li>
+        <li><code>moveAndLoad()</code>: Combines movement, unloading, and loading logic. If not moving, unloads and
+            loads people, then sets the next destination.</li>
+    </ul>
+    <h5>Testing Ideas</h5>
+    <ul>
+        <li>Test constructor:
+            <code>let floors = [new Floor(0), new Floor(1)]; let e = new Elevator(4, floors); console.assert(e.capacity === 4 && e.currentFloor === 0);</code>
+        </li>
+        <li>Test isFull: <code>console.assert(e.isFull() === false);</code></li>
+        <li>Test move: <code>e.destinationFloor = 1; console.assert(e.move() === true && e.currentFloor === 1);</code>
+        </li>
+        <li>Test getNextDirection:
+            <code>e.destinationFloor = 2; console.assert(e.getNextDirection() === DIRECTION.UP);</code></li>
+    </ul>
+
+    <h3>8. RegularElevator Class</h3>
+    <p><strong>Why build this next:</strong> RegularElevator is a simple subclass of Elevator with a fixed capacity. It
+        depends on Elevator.</p>
+    <p><strong>Next:</strong> Build the Building class, which manages collections of floors and elevators.</p>
+    <p>A subclass of Elevator with a fixed capacity.</p>
+    <h4>Properties:</h4>
+    <ul>
+        <li>Inherits all from Elevator, with capacity set to 4.</li>
+    </ul>
+    <h4>Methods:</h4>
+    <ul>
+        <li><code>constructor(floors)</code>: Initializes a RegularElevator with the given floors and a fixed capacity
+            of 4.</li>
+    </ul>
+    <h5>Testing Ideas</h5>
+    <ul>
+        <li>Test constructor:
+            <code>let floors = [new Floor(0), new Floor(1)]; let re = new RegularElevator(floors); console.assert(re.capacity === 4);</code>
+        </li>
+    </ul>
+
+    <h3>9. Building Class</h3>
+    <p><strong>Why build this next:</strong> The Building class manages the overall structure, creating floors and
+        elevators. It depends on Floor and RegularElevator.</p>
+    <p><strong>Next:</strong> Finally, build the Simulation class, which orchestrates the entire simulation.</p>
+    <p>Manages the overall building, including floors and elevators.</p>
+    <h4>Properties:</h4>
+    <ul>
+        <li><code>numElevators</code>: Number of elevators in the building.</li>
+        <li><code>numFloors</code>: Number of floors in the building.</li>
+        <li><code>elevators</code>: Array of Elevator instances.</li>
+        <li><code>floors</code>: Array of Floor instances.</li>
+    </ul>
+    <h4>Methods:</h4>
+    <ul>
+        <li><code>constructor(numElevators, numFloors)</code>: Initializes the building with the specified number of
+            elevators and floors, creating Floor and Elevator instances.</li>
+        <li><code>moveElevatorsAndLoad()</code>: Calls moveAndLoad on each elevator.</li>
+        <li><code>getFloor(floorNumber)</code>: Returns the Floor object for the given floor number.</li>
+        <li><code>getNumberFloors()</code>: Returns the total number of floors.</li>
+        <li><code>generatePeopleRandomly(numPeople)</code>: Creates the specified number of people with random names,
+            origin floors, and destination floors (ensuring origin != destination), and adds them to random floors.</li>
+    </ul>
+    <h5>Testing Ideas</h5>
+    <ul>
+        <li>Test constructor:
+            <code>let b = new Building(1, 3); console.assert(b.numElevators === 1 && b.numFloors === 3 && b.floors.length === 3 && b.elevators.length === 1);</code>
+        </li>
+        <li>Test getFloor: <code>console.assert(b.getFloor(1).floorNumber === 1);</code></li>
+        <li>Test generatePeopleRandomly:
+            <code>b.generatePeopleRandomly(2); console.assert(b.floors.some(f => f.getPeopleOnFloor() > 0));</code></li>
+    </ul>
+
+    <h3>10. Simulation Class</h3>
+    <p><strong>Why build this last:</strong> The Simulation class ties everything together, managing the simulation
+        loop, timing, and rendering. It depends on Building and all other classes.</p>
+    <p><strong>Next:</strong> Integrate everything into the HTML file and test the simulation.</p>
+    <p>Manages the entire simulation, including timing, running/pausing, and rendering.</p>
+    <h4>Properties:</h4>
+    <ul>
+        <li><code>numElevators</code>: Number of elevators.</li>
+        <li><code>numFloors</code>: Number of floors.</li>
+        <li><code>peoplePerSecond</code>: Number of new people added per simulation step.</li>
+        <li><code>timer</code>: A counter for simulation steps.</li>
+        <li><code>isRunning</code>: Boolean indicating if the simulation is running.</li>
+        <li><code>intervalId</code>: ID for the setInterval used for running the simulation.</li>
+        <li><code>canvas</code>: The HTML canvas element for rendering.</li>
+        <li><code>ctx</code>: The 2D context of the canvas.</li>
+        <li><code>building</code>: A Building instance.</li>
+    </ul>
+    <h4>Methods:</h4>
+    <ul>
+        <li><code>constructor(numElevators, numFloors, peoplePerSecond, canvas)</code>: Initializes the simulation with
+            the given parameters, creating a Building instance and setting up the canvas context.</li>
+        <li><code>step()</code>: Advances the simulation by one step: generates people, presses floor buttons, moves
+            elevators, and animates the canvas.</li>
+        <li><code>toggleRun()</code>: Toggles between running and pausing the simulation.</li>
+        <li><code>run()</code>: Starts the simulation by setting an interval to call step() every 1000ms.</li>
+        <li><code>pause()</code>: Stops the simulation by clearing the interval.</li>
+        <li><code>animate()</code>: Prints a text-based representation of the building state to the console.</li>
+        <li><code>animateCanvas()</code>: Renders the simulation visually on the canvas, showing floors, elevators,
+            people, and the timer.</li>
+    </ul>
+    <h5>Testing Ideas</h5>
+    <ul>
+        <li>Test constructor:
+            <code>let canvas = document.createElement('canvas'); let sim = new Simulation(1, 3, 1, canvas); console.assert(sim.numElevators === 1 && sim.building instanceof Building);</code>
+        </li>
+        <li>Test step: <code>sim.step(); console.assert(sim.timer === 1);</code></li>
+        <li>Test toggleRun:
+            <code>sim.toggleRun(); console.assert(sim.isRunning === true); sim.toggleRun(); console.assert(sim.isRunning === false);</code>
+        </li>
+    </ul>
+
+    <h2>How to Recreate the Project</h2>
+    <ol>
+        <li><strong>Implement Classes in Order</strong>: Follow the step-by-step class implementation above (1-10),
+            building each class in the specified order to manage dependencies.</li>
+        <li><strong>HTML Setup</strong>: Create <code>elevator.html</code> with a canvas element and a button to
+            start/pause the simulation. Include scripts to import and run the Simulation class.</li>
+        <li><strong>Testing</strong>: Run the simulation and verify that elevators move correctly, people are
+            loaded/unloaded, and the canvas updates properly.</li>
+    </ol>
+    <p>This summary covers all the essential components. The project uses ES6 modules, so ensure your environment
+        supports them (e.g., via a local server). For visualization, the canvas drawing logic can be adjusted for
+        different layouts.</p>
+</body>
+
+</html>
