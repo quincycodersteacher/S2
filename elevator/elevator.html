@@ -4,8 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elevator Simulation</title>
+    <title>VERTICAL TRANSIT SYSTEM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-deep: #0a0a0c;
+            --bg-panel: #12131a;
+            --amber: #ffb000;
+            --amber-dim: #b37a00;
+            --amber-glow: rgba(255, 176, 0, 0.15);
+            --cyan: #00ffd0;
+            --cyan-dim: #00a088;
+            --red-alert: #ff3366;
+            --grid-line: rgba(255, 176, 0, 0.08);
+            --text-dim: rgba(255, 255, 255, 0.4);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,129 +29,312 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-deep);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 30px;
+            overflow: hidden;
+        }
+
+        /* Scanline overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, 0.15) 2px,
+                rgba(0, 0, 0, 0.15) 4px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* Grid background */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: -1;
         }
 
         .container {
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 24px;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            align-items: baseline;
             gap: 20px;
         }
 
         h1 {
-            color: #ffffff;
-            font-size: 2.5rem;
-            font-weight: 300;
-            letter-spacing: 2px;
-            text-shadow: 0 2px 10px rgba(233, 69, 96, 0.3);
-        }
-
-        h1 span {
-            color: #e94560;
-            font-weight: 600;
-        }
-
-        .controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .myBtn {
-            background: linear-gradient(135deg, #e94560 0%, #533483 100%);
-            color: white;
-            border: none;
-            padding: 14px 35px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+            font-family: 'Orbitron', sans-serif;
+            color: var(--amber);
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: 8px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            text-shadow:
+                0 0 20px var(--amber-glow),
+                0 0 40px var(--amber-glow);
+            position: relative;
         }
 
-        .myBtn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(233, 69, 96, 0.5);
+        h1::before {
+            content: 'SYS//';
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            position: absolute;
+            top: -12px;
+            left: 0;
+            letter-spacing: 2px;
         }
 
-        .myBtn:active {
-            transform: translateY(0);
+        .status-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--cyan);
+            background: rgba(0, 255, 208, 0.1);
+            border: 1px solid var(--cyan-dim);
+            padding: 4px 10px;
+            letter-spacing: 2px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .control-panel {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            padding: 16px 30px;
+            background: var(--bg-panel);
+            border: 1px solid rgba(255, 176, 0, 0.2);
+            position: relative;
+        }
+
+        .control-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--amber), transparent);
+        }
+
+        .btn-run {
+            font-family: 'Orbitron', sans-serif;
+            background: transparent;
+            color: var(--amber);
+            border: 2px solid var(--amber);
+            padding: 12px 32px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            text-transform: uppercase;
+        }
+
+        .btn-run:hover {
+            background: var(--amber);
+            color: var(--bg-deep);
+            box-shadow: 0 0 30px var(--amber-glow);
+        }
+
+        .btn-run:active {
+            transform: scale(0.98);
+        }
+
+        .stat-group {
+            display: flex;
+            gap: 25px;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--amber);
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .stat-value.cyan {
+            color: var(--cyan);
+        }
+
+        .stat-label {
+            font-size: 0.55rem;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .canvas-frame {
+            position: relative;
+            padding: 3px;
+            background: linear-gradient(135deg, var(--amber-dim), transparent, var(--amber-dim));
+        }
+
+        .canvas-frame::before,
+        .canvas-frame::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--amber);
+        }
+
+        .canvas-frame::before {
+            top: -5px;
+            left: -5px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .canvas-frame::after {
+            bottom: -5px;
+            right: -5px;
+            border-left: none;
+            border-top: none;
         }
 
         #elevatorCanvas {
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5),
-                        0 0 0 1px rgba(255, 255, 255, 0.1);
+            display: block;
+            background: var(--bg-panel);
         }
 
-        .info {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 12px;
-            text-align: center;
-            max-width: 500px;
-            line-height: 1.6;
+        .footer-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 900px;
+            padding: 0 10px;
         }
 
         .legend {
             display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin-top: 10px;
+            gap: 24px;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
             gap: 8px;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 13px;
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 1px;
         }
 
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+        .legend-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .legend-icon.up {
+            background: var(--cyan);
+            box-shadow: 0 0 10px rgba(0, 255, 208, 0.5);
+        }
+
+        .legend-icon.down {
+            background: var(--red-alert);
+            box-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+        }
+
+        .legend-icon.idle {
+            background: var(--amber-dim);
+        }
+
+        .version {
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            letter-spacing: 2px;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1><span>Elevator</span> Simulation</h1>
-
-        <div class="controls">
-            <button class="myBtn" onclick="run()">
-                Start / Pause
-            </button>
+        <div class="header">
+            <h1>Vertical Transit</h1>
+            <span class="status-badge">SIMULATION</span>
         </div>
 
-        <canvas id="elevatorCanvas" width="800" height="450"></canvas>
-
-        <div class="info">
-            <p>Watch elevators pick up passengers and deliver them to their destinations.</p>
-            <p>Each person is colored by their destination floor.</p>
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #4ECDC4;"></div>
-                    <span>Going Up</span>
+        <div class="control-panel">
+            <button class="btn-run" onclick="run()" id="runBtn">
+                Initialize
+            </button>
+            <div class="stat-group">
+                <div class="stat">
+                    <span class="stat-value" id="timerDisplay">000</span>
+                    <span class="stat-label">Cycle</span>
                 </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #FF6B6B;"></div>
-                    <span>Going Down</span>
+                <div class="stat">
+                    <span class="stat-value cyan" id="waitingDisplay">0</span>
+                    <span class="stat-label">Waiting</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="transitDisplay">0</span>
+                    <span class="stat-label">In Transit</span>
                 </div>
             </div>
+        </div>
+
+        <div class="canvas-frame">
+            <canvas id="elevatorCanvas" width="900" height="500"></canvas>
+        </div>
+
+        <div class="footer-info">
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-icon up"></div>
+                    <span>ASCENDING</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon down"></div>
+                    <span>DESCENDING</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon idle"></div>
+                    <span>IDLE</span>
+                </div>
+            </div>
+            <div class="version">VTS-2.0.1</div>
         </div>
     </div>
 
@@ -143,12 +342,22 @@
         import { Simulation } from './js/elevator.js';
 
         let sim;
+        let isRunning = false;
 
         function run() {
+            const btn = document.getElementById('runBtn');
             if (!sim) {
                 sim = new Simulation(2, 3, 1, document.getElementById('elevatorCanvas'));
+                // Pass DOM references for stats
+                sim.domStats = {
+                    timer: document.getElementById('timerDisplay'),
+                    waiting: document.getElementById('waitingDisplay'),
+                    transit: document.getElementById('transitDisplay')
+                };
             }
             sim.toggleRun();
+            isRunning = !isRunning;
+            btn.textContent = isRunning ? 'Pause' : 'Resume';
         }
 
         window.run = run;

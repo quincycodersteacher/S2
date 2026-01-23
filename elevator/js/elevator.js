@@ -276,285 +276,353 @@ class Simulation {
         console.log(`Timer: ${this.timer}`);
     }
 
-    // Helper to draw rounded rectangle
-    roundRect(ctx, x, y, width, height, radius) {
-        ctx.beginPath();
-        ctx.moveTo(x + radius, y);
-        ctx.lineTo(x + width - radius, y);
-        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-        ctx.lineTo(x + width, y + height - radius);
-        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-        ctx.lineTo(x + radius, y + height);
-        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-        ctx.lineTo(x, y + radius);
-        ctx.quadraticCurveTo(x, y, x + radius, y);
-        ctx.closePath();
-    }
-
-    // Get color for person based on destination
-    getPersonColor(destinationFloor) {
-        const colors = [
-            '#FF6B6B', // Red
-            '#4ECDC4', // Teal
-            '#45B7D1', // Blue
-            '#96CEB4', // Green
-            '#FFEAA7', // Yellow
-            '#DDA0DD', // Plum
-            '#98D8C8', // Mint
-            '#F7DC6F', // Gold
-        ];
-        return colors[destinationFloor % colors.length];
-    }
+    // Color palette - Retro-futuristic control room
+    colors = {
+        bgDeep: '#0a0a0c',
+        bgPanel: '#12131a',
+        amber: '#ffb000',
+        amberDim: '#b37a00',
+        amberGlow: 'rgba(255, 176, 0, 0.3)',
+        cyan: '#00ffd0',
+        cyanDim: '#00a088',
+        cyanGlow: 'rgba(0, 255, 208, 0.3)',
+        red: '#ff3366',
+        redGlow: 'rgba(255, 51, 102, 0.3)',
+        gridLine: 'rgba(255, 176, 0, 0.06)',
+        textDim: 'rgba(255, 255, 255, 0.35)',
+        shaftBg: '#0d0e12'
+    };
 
     animateCanvas() {
         this.timer++;
         const ctx = this.ctx;
         const canvas = this.canvas;
-        const floorHeight = (canvas.height - 60) / this.numFloors; // Reserve space for header
-        const headerHeight = 60;
-        const elevatorWidth = 100;
-        const elevatorGap = 15;
-        const elevatorAreaWidth = (elevatorWidth + elevatorGap) * this.numElevators + 30;
-        const elevatorStartX = canvas.width - elevatorAreaWidth + 20;
-        const personRadius = 14;
+        const c = this.colors;
 
-        // Clear canvas with gradient background
-        const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        bgGradient.addColorStop(0, '#1a1a2e');
-        bgGradient.addColorStop(1, '#16213e');
-        ctx.fillStyle = bgGradient;
+        // Layout calculations
+        const padding = 25;
+        const shaftWidth = 140;
+        const shaftGap = 8;
+        const totalShaftWidth = (shaftWidth * this.numElevators) + (shaftGap * (this.numElevators - 1)) + 60;
+        const floorHeight = canvas.height / this.numFloors;
+        const shaftStartX = canvas.width - totalShaftWidth - padding + 30;
+
+        // Update DOM stats if available
+        if (this.domStats) {
+            let totalWaiting = 0;
+            let totalInTransit = 0;
+            for (let floor of this.building.floors) {
+                totalWaiting += floor.queue.people.length;
+            }
+            for (let elev of this.building.elevators) {
+                totalInTransit += elev.queue.people.length;
+            }
+            this.domStats.timer.textContent = String(this.timer).padStart(3, '0');
+            this.domStats.waiting.textContent = totalWaiting;
+            this.domStats.transit.textContent = totalInTransit;
+        }
+
+        // Clear canvas
+        ctx.fillStyle = c.bgPanel;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Draw header panel
-        const headerGradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-        headerGradient.addColorStop(0, '#0f3460');
-        headerGradient.addColorStop(1, '#533483');
-        ctx.fillStyle = headerGradient;
-        this.roundRect(ctx, 10, 10, canvas.width - 20, 45, 10);
-        ctx.fill();
-
-        // Header text
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText('🏢 Elevator Simulation', 25, 40);
-
-        // Stats
-        ctx.font = '14px Arial';
-        ctx.fillStyle = '#e94560';
-        ctx.fillText(`⏱ Time: ${this.timer}s`, canvas.width - 280, 38);
-
-        let totalWaiting = 0;
-        for (let floor of this.building.floors) {
-            totalWaiting += floor.queue.people.length;
+        // Draw subtle grid
+        ctx.strokeStyle = c.gridLine;
+        ctx.lineWidth = 1;
+        const gridSize = 30;
+        for (let x = 0; x < canvas.width; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvas.height);
+            ctx.stroke();
         }
-        ctx.fillStyle = '#4ECDC4';
-        ctx.fillText(`👥 Waiting: ${totalWaiting}`, canvas.width - 170, 38);
-
-        let totalInElevators = 0;
-        for (let elev of this.building.elevators) {
-            totalInElevators += elev.queue.people.length;
+        for (let y = 0; y < canvas.height; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
         }
-        ctx.fillStyle = '#96CEB4';
-        ctx.fillText(`🛗 In Transit: ${totalInElevators}`, canvas.width - 70, 38);
 
-        // Draw elevator shaft background
-        ctx.fillStyle = 'rgba(15, 52, 96, 0.6)';
-        this.roundRect(ctx, elevatorStartX - 15, headerHeight + 5, elevatorAreaWidth - 10, canvas.height - headerHeight - 15, 10);
-        ctx.fill();
+        // Draw building cross-section outline
+        ctx.strokeStyle = c.amberDim;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(padding, 0, canvas.width - padding * 2, canvas.height);
 
-        // Draw floors
+        // Draw floor separators and floor areas
         for (let f = 0; f < this.numFloors; f++) {
             const y = canvas.height - (f + 1) * floorHeight;
+            const floor = this.building.getFloor(f);
 
-            // Floor background
-            const floorGradient = ctx.createLinearGradient(0, y, 0, y + floorHeight);
-            floorGradient.addColorStop(0, 'rgba(30, 55, 90, 0.4)');
-            floorGradient.addColorStop(1, 'rgba(20, 40, 70, 0.4)');
-            ctx.fillStyle = floorGradient;
-            this.roundRect(ctx, 10, y + 2, elevatorStartX - 30, floorHeight - 4, 8);
-            ctx.fill();
-
-            // Floor divider line
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            // Floor separator line
+            ctx.strokeStyle = c.amberDim;
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(10, y + floorHeight);
-            ctx.lineTo(canvas.width - 10, y + floorHeight);
+            ctx.moveTo(padding, y + floorHeight);
+            ctx.lineTo(canvas.width - padding, y + floorHeight);
             ctx.stroke();
 
-            // Floor label badge
-            ctx.fillStyle = '#e94560';
-            this.roundRect(ctx, 15, y + floorHeight / 2 - 15, 55, 30, 6);
-            ctx.fill();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`F${f}`, 42, y + floorHeight / 2 + 5);
+            // Floor label - architectural style
+            ctx.fillStyle = c.amber;
+            ctx.font = '900 28px Orbitron, monospace';
             ctx.textAlign = 'left';
+            ctx.fillText(`${f}`, padding + 15, y + floorHeight - 20);
 
-            // Draw up/down buttons
-            const floor = this.building.getFloor(f);
-            const btnX = 75;
-            const btnY = y + floorHeight / 2 - 12;
+            // Floor sub-label
+            ctx.fillStyle = c.textDim;
+            ctx.font = '300 9px JetBrains Mono, monospace';
+            ctx.fillText('LEVEL', padding + 15, y + floorHeight - 45);
+
+            // Draw call buttons panel
+            const btnPanelX = padding + 60;
+            const btnPanelY = y + floorHeight / 2 - 25;
+
+            // Button panel background
+            ctx.fillStyle = 'rgba(255, 176, 0, 0.05)';
+            ctx.fillRect(btnPanelX, btnPanelY, 32, 50);
+            ctx.strokeStyle = 'rgba(255, 176, 0, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(btnPanelX, btnPanelY, 32, 50);
 
             // Up button
             if (f < this.numFloors - 1) {
-                ctx.fillStyle = floor.upButtonPressed ? '#4ECDC4' : 'rgba(78, 205, 196, 0.3)';
-                this.roundRect(ctx, btnX, btnY - 2, 20, 12, 3);
+                const upActive = floor.upButtonPressed;
+                ctx.fillStyle = upActive ? c.cyan : 'rgba(0, 255, 208, 0.15)';
+                ctx.beginPath();
+                ctx.moveTo(btnPanelX + 16, btnPanelY + 8);
+                ctx.lineTo(btnPanelX + 26, btnPanelY + 20);
+                ctx.lineTo(btnPanelX + 6, btnPanelY + 20);
+                ctx.closePath();
                 ctx.fill();
-                ctx.fillStyle = floor.upButtonPressed ? '#1a1a2e' : 'rgba(255,255,255,0.5)';
-                ctx.font = '10px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('▲', btnX + 10, btnY + 7);
+                if (upActive) {
+                    ctx.shadowColor = c.cyan;
+                    ctx.shadowBlur = 15;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
             }
 
             // Down button
             if (f > 0) {
-                ctx.fillStyle = floor.downButtonPressed ? '#FF6B6B' : 'rgba(255, 107, 107, 0.3)';
-                this.roundRect(ctx, btnX, btnY + 14, 20, 12, 3);
+                const downActive = floor.downButtonPressed;
+                ctx.fillStyle = downActive ? c.red : 'rgba(255, 51, 102, 0.15)';
+                ctx.beginPath();
+                ctx.moveTo(btnPanelX + 16, btnPanelY + 42);
+                ctx.lineTo(btnPanelX + 26, btnPanelY + 30);
+                ctx.lineTo(btnPanelX + 6, btnPanelY + 30);
+                ctx.closePath();
                 ctx.fill();
-                ctx.fillStyle = floor.downButtonPressed ? '#1a1a2e' : 'rgba(255,255,255,0.5)';
-                ctx.font = '10px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('▼', btnX + 10, btnY + 23);
+                if (downActive) {
+                    ctx.shadowColor = c.red;
+                    ctx.shadowBlur = 15;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
             }
-            ctx.textAlign = 'left';
+
+            // Draw waiting area with people
+            const people = floor.queue.people;
+            const waitingStartX = padding + 110;
+            const personSpacing = 38;
+            const maxPerRow = Math.floor((shaftStartX - waitingStartX - 20) / personSpacing);
+
+            for (let idx = 0; idx < people.length; idx++) {
+                const p = people[idx];
+                const row = Math.floor(idx / maxPerRow);
+                const col = idx % maxPerRow;
+                const px = waitingStartX + col * personSpacing;
+                const py = y + 30 + row * 50;
+
+                this.drawPerson(ctx, px, py, p.destinationFloor, p.destinationFloor > f);
+            }
         }
 
-        // Draw elevators
-        for (let i = 0; i < this.building.elevators.length; i++) {
+        // Draw elevator shafts
+        for (let i = 0; i < this.numElevators; i++) {
             const elevator = this.building.elevators[i];
-            const x = elevatorStartX + i * (elevatorWidth + elevatorGap);
-            const y = canvas.height - (elevator.currentFloor + 1) * floorHeight;
+            const shaftX = shaftStartX + i * (shaftWidth + shaftGap);
 
-            // Elevator car shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            this.roundRect(ctx, x + 4, y + 6, elevatorWidth - 8, floorHeight - 10, 8);
-            ctx.fill();
+            // Shaft background
+            ctx.fillStyle = c.shaftBg;
+            ctx.fillRect(shaftX, 0, shaftWidth, canvas.height);
 
-            // Elevator car body
-            const elevGradient = ctx.createLinearGradient(x, y, x + elevatorWidth, y);
-            elevGradient.addColorStop(0, '#2d4a6d');
-            elevGradient.addColorStop(0.5, '#3d5a7d');
-            elevGradient.addColorStop(1, '#2d4a6d');
-            ctx.fillStyle = elevGradient;
-            this.roundRect(ctx, x, y + 2, elevatorWidth - 8, floorHeight - 8, 8);
-            ctx.fill();
+            // Shaft borders
+            ctx.strokeStyle = 'rgba(255, 176, 0, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(shaftX, 0, shaftWidth, canvas.height);
 
-            // Elevator doors
-            ctx.fillStyle = '#1a1a2e';
-            const doorWidth = (elevatorWidth - 20) / 2 - 2;
-            ctx.fillRect(x + 6, y + 20, doorWidth, floorHeight - 35);
-            ctx.fillRect(x + 10 + doorWidth, y + 20, doorWidth, floorHeight - 35);
-
-            // Elevator floor indicator
-            ctx.fillStyle = '#e94560';
-            this.roundRect(ctx, x + (elevatorWidth - 8) / 2 - 15, y + 6, 30, 14, 4);
-            ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 10px Arial';
+            // Shaft label at top
+            ctx.fillStyle = c.textDim;
+            ctx.font = '500 10px JetBrains Mono, monospace';
             ctx.textAlign = 'center';
-            ctx.fillText(`F${elevator.currentFloor}`, x + (elevatorWidth - 8) / 2, y + 16);
+            ctx.fillText(`SHAFT ${String.fromCharCode(65 + i)}`, shaftX + shaftWidth / 2, 15);
 
-            // Direction indicator
-            const direction = elevator.destinationFloor > elevator.currentFloor ? '▲' :
-                             elevator.destinationFloor < elevator.currentFloor ? '▼' : '●';
-            const dirColor = elevator.destinationFloor > elevator.currentFloor ? '#4ECDC4' :
-                            elevator.destinationFloor < elevator.currentFloor ? '#FF6B6B' : '#888';
-            ctx.fillStyle = dirColor;
-            ctx.font = '12px Arial';
-            ctx.fillText(direction, x + (elevatorWidth - 8) / 2 + 22, y + 16);
-            ctx.textAlign = 'left';
+            // Draw guide rails
+            ctx.strokeStyle = 'rgba(255, 176, 0, 0.1)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(shaftX + 8, 0);
+            ctx.lineTo(shaftX + 8, canvas.height);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(shaftX + shaftWidth - 8, 0);
+            ctx.lineTo(shaftX + shaftWidth - 8, canvas.height);
+            ctx.stroke();
+
+            // Draw floor indicators in shaft
+            for (let f = 0; f < this.numFloors; f++) {
+                const indicatorY = canvas.height - (f + 1) * floorHeight + floorHeight - 5;
+                ctx.fillStyle = elevator.currentFloor === f ? c.amber : 'rgba(255, 176, 0, 0.15)';
+                ctx.font = '700 11px Orbitron, monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(f.toString(), shaftX + shaftWidth / 2, indicatorY);
+            }
+
+            // Draw elevator car
+            const carY = canvas.height - (elevator.currentFloor + 1) * floorHeight + 8;
+            const carHeight = floorHeight - 16;
+            const carX = shaftX + 12;
+            const carWidth = shaftWidth - 24;
+
+            // Car shadow/depth
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(carX + 4, carY + 4, carWidth, carHeight);
+
+            // Determine elevator state and color
+            const isMovingUp = elevator.destinationFloor > elevator.currentFloor;
+            const isMovingDown = elevator.destinationFloor < elevator.currentFloor;
+            const stateColor = isMovingUp ? c.cyan : isMovingDown ? c.red : c.amberDim;
+            const stateGlow = isMovingUp ? c.cyanGlow : isMovingDown ? c.redGlow : c.amberGlow;
+
+            // Car body with state-based border
+            ctx.fillStyle = '#1a1b22';
+            ctx.fillRect(carX, carY, carWidth, carHeight);
+
+            // Car border glow
+            ctx.strokeStyle = stateColor;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(carX, carY, carWidth, carHeight);
+
+            // Add glow effect
+            ctx.shadowColor = stateGlow;
+            ctx.shadowBlur = 10;
+            ctx.strokeRect(carX, carY, carWidth, carHeight);
+            ctx.shadowBlur = 0;
+
+            // Elevator doors (center split)
+            const doorGap = 4;
+            const doorWidth = (carWidth - doorGap) / 2 - 8;
+            ctx.fillStyle = '#252730';
+            ctx.fillRect(carX + 4, carY + 25, doorWidth, carHeight - 35);
+            ctx.fillRect(carX + carWidth - doorWidth - 4, carY + 25, doorWidth, carHeight - 35);
+
+            // Door frame
+            ctx.strokeStyle = 'rgba(255, 176, 0, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(carX + 4, carY + 25, doorWidth, carHeight - 35);
+            ctx.strokeRect(carX + carWidth - doorWidth - 4, carY + 25, doorWidth, carHeight - 35);
+
+            // Floor display panel at top of car
+            ctx.fillStyle = '#0a0a0c';
+            ctx.fillRect(carX + carWidth / 2 - 20, carY + 4, 40, 18);
+            ctx.strokeStyle = stateColor;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(carX + carWidth / 2 - 20, carY + 4, 40, 18);
+
+            // Floor number display
+            ctx.fillStyle = stateColor;
+            ctx.font = '700 12px Orbitron, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(elevator.currentFloor.toString(), carX + carWidth / 2, carY + 17);
+
+            // Direction arrow
+            if (isMovingUp || isMovingDown) {
+                ctx.fillStyle = stateColor;
+                ctx.font = '14px Arial';
+                ctx.fillText(isMovingUp ? '▲' : '▼', carX + carWidth / 2 + 25, carY + 16);
+            }
 
             // Draw people in elevator
             const people = elevator.queue.people;
-            const maxPerRow = 2;
             for (let idx = 0; idx < people.length; idx++) {
                 const p = people[idx];
-                const row = Math.floor(idx / maxPerRow);
-                const col = idx % maxPerRow;
-                const personX = x + 20 + col * 30;
-                const personY = y + 35 + row * 30;
+                const col = idx % 2;
+                const row = Math.floor(idx / 2);
+                const px = carX + 25 + col * 45;
+                const py = carY + 45 + row * 45;
 
-                // Person shadow
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.beginPath();
-                ctx.arc(personX + 2, personY + 2, personRadius, 0, 2 * Math.PI);
-                ctx.fill();
-
-                // Person circle
-                ctx.fillStyle = this.getPersonColor(p.destinationFloor);
-                ctx.beginPath();
-                ctx.arc(personX, personY, personRadius, 0, 2 * Math.PI);
-                ctx.fill();
-
-                // Person border
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                // Destination text
-                ctx.fillStyle = '#1a1a2e';
-                ctx.font = 'bold 11px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(p.destinationFloor.toString(), personX, personY + 4);
-                ctx.textAlign = 'left';
+                this.drawPerson(ctx, px, py, p.destinationFloor, p.destinationFloor > elevator.currentFloor, true);
             }
 
-            // Elevator label
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.font = '10px Arial';
+            // Capacity indicator
+            ctx.fillStyle = c.textDim;
+            ctx.font = '300 8px JetBrains Mono, monospace';
             ctx.textAlign = 'center';
-            ctx.fillText(`Elevator ${i + 1}`, x + (elevatorWidth - 8) / 2, y + floorHeight - 12);
-            ctx.textAlign = 'left';
+            ctx.fillText(`${people.length}/${elevator.capacity}`, carX + carWidth / 2, carY + carHeight - 5);
         }
 
-        // Draw people on floors
-        for (let f = 0; f < this.numFloors; f++) {
-            const floor = this.building.getFloor(f);
-            const y = canvas.height - (f + 1) * floorHeight;
-            const people = floor.queue.people;
-            const startX = 105;
-            const maxPerRow = 8;
+        // Draw corner brackets for architectural feel
+        this.drawCornerBracket(ctx, padding - 5, -5, 20, c.amber);
+        this.drawCornerBracket(ctx, canvas.width - padding + 5, -5, 20, c.amber, true, false);
+        this.drawCornerBracket(ctx, padding - 5, canvas.height + 5, 20, c.amber, false, true);
+        this.drawCornerBracket(ctx, canvas.width - padding + 5, canvas.height + 5, 20, c.amber, true, true);
+    }
 
-            for (let idx = 0; idx < people.length; idx++) {
-                const p = people[idx];
-                const row = Math.floor(idx / maxPerRow);
-                const col = idx % maxPerRow;
-                const personX = startX + col * 32;
-                const personY = y + 25 + row * 35;
+    drawPerson(ctx, x, y, destFloor, goingUp, inElevator = false) {
+        const c = this.colors;
+        const color = goingUp ? c.cyan : c.red;
+        const glow = goingUp ? c.cyanGlow : c.redGlow;
 
-                // Person shadow
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.beginPath();
-                ctx.arc(personX + 2, personY + 2, personRadius, 0, 2 * Math.PI);
-                ctx.fill();
+        // Person body - geometric humanoid shape
+        const size = inElevator ? 14 : 16;
 
-                // Person circle with destination color
-                ctx.fillStyle = this.getPersonColor(p.destinationFloor);
-                ctx.beginPath();
-                ctx.arc(personX, personY, personRadius, 0, 2 * Math.PI);
-                ctx.fill();
+        // Glow effect
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = 8;
 
-                // Person border
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
+        // Head
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.6, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
 
-                // Destination text
-                ctx.fillStyle = '#1a1a2e';
-                ctx.font = 'bold 11px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(p.destinationFloor.toString(), personX, personY + 4);
-                ctx.textAlign = 'left';
-            }
-        }
+        // Body (trapezoid)
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.4, y);
+        ctx.lineTo(x + size * 0.4, y);
+        ctx.lineTo(x + size * 0.25, y + size * 0.7);
+        ctx.lineTo(x - size * 0.25, y + size * 0.7);
+        ctx.closePath();
+        ctx.fill();
 
-        // Legend
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.font = '10px Arial';
-        ctx.fillText('● Person (number = destination floor)', 15, canvas.height - 8);
+        ctx.shadowBlur = 0;
+
+        // Destination badge
+        ctx.fillStyle = c.bgDeep;
+        ctx.beginPath();
+        ctx.arc(x, y + size * 0.2, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = color;
+        ctx.font = `700 ${size * 0.45}px Orbitron, monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(destFloor.toString(), x, y + size * 0.25);
+        ctx.textBaseline = 'alphabetic';
+    }
+
+    drawCornerBracket(ctx, x, y, size, color, flipX = false, flipY = false) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        const dx = flipX ? -1 : 1;
+        const dy = flipY ? -1 : 1;
+
+        ctx.moveTo(x + size * dx, y);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x, y + size * dy);
+
+        ctx.stroke();
     }
 }
 export { Simulation };
