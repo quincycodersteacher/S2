@@ -276,80 +276,285 @@ class Simulation {
         console.log(`Timer: ${this.timer}`);
     }
 
+    // Helper to draw rounded rectangle
+    roundRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+    }
+
+    // Get color for person based on destination
+    getPersonColor(destinationFloor) {
+        const colors = [
+            '#FF6B6B', // Red
+            '#4ECDC4', // Teal
+            '#45B7D1', // Blue
+            '#96CEB4', // Green
+            '#FFEAA7', // Yellow
+            '#DDA0DD', // Plum
+            '#98D8C8', // Mint
+            '#F7DC6F', // Gold
+        ];
+        return colors[destinationFloor % colors.length];
+    }
+
     animateCanvas() {
         this.timer++;
         const ctx = this.ctx;
         const canvas = this.canvas;
-        const floorHeight = canvas.height / this.numFloors;
-        const elevatorWidth = 150;
-        const elevatorStartX = canvas.width - elevatorWidth * this.numElevators;
-        const personRadius = 10;
+        const floorHeight = (canvas.height - 60) / this.numFloors; // Reserve space for header
+        const headerHeight = 60;
+        const elevatorWidth = 100;
+        const elevatorGap = 15;
+        const elevatorAreaWidth = (elevatorWidth + elevatorGap) * this.numElevators + 30;
+        const elevatorStartX = canvas.width - elevatorAreaWidth + 20;
+        const personRadius = 14;
 
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Clear canvas with gradient background
+        const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        bgGradient.addColorStop(0, '#1a1a2e');
+        bgGradient.addColorStop(1, '#16213e');
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw header panel
+        const headerGradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+        headerGradient.addColorStop(0, '#0f3460');
+        headerGradient.addColorStop(1, '#533483');
+        ctx.fillStyle = headerGradient;
+        this.roundRect(ctx, 10, 10, canvas.width - 20, 45, 10);
+        ctx.fill();
+
+        // Header text
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText('🏢 Elevator Simulation', 25, 40);
+
+        // Stats
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#e94560';
+        ctx.fillText(`⏱ Time: ${this.timer}s`, canvas.width - 280, 38);
+
+        let totalWaiting = 0;
+        for (let floor of this.building.floors) {
+            totalWaiting += floor.queue.people.length;
+        }
+        ctx.fillStyle = '#4ECDC4';
+        ctx.fillText(`👥 Waiting: ${totalWaiting}`, canvas.width - 170, 38);
+
+        let totalInElevators = 0;
+        for (let elev of this.building.elevators) {
+            totalInElevators += elev.queue.people.length;
+        }
+        ctx.fillStyle = '#96CEB4';
+        ctx.fillText(`🛗 In Transit: ${totalInElevators}`, canvas.width - 70, 38);
+
+        // Draw elevator shaft background
+        ctx.fillStyle = 'rgba(15, 52, 96, 0.6)';
+        this.roundRect(ctx, elevatorStartX - 15, headerHeight + 5, elevatorAreaWidth - 10, canvas.height - headerHeight - 15, 10);
+        ctx.fill();
 
         // Draw floors
         for (let f = 0; f < this.numFloors; f++) {
             const y = canvas.height - (f + 1) * floorHeight;
-            ctx.strokeRect(0, y, canvas.width, floorHeight);
-            ctx.fillText(`Floor ${f}`, 10, y + floorHeight / 2);
+
+            // Floor background
+            const floorGradient = ctx.createLinearGradient(0, y, 0, y + floorHeight);
+            floorGradient.addColorStop(0, 'rgba(30, 55, 90, 0.4)');
+            floorGradient.addColorStop(1, 'rgba(20, 40, 70, 0.4)');
+            ctx.fillStyle = floorGradient;
+            this.roundRect(ctx, 10, y + 2, elevatorStartX - 30, floorHeight - 4, 8);
+            ctx.fill();
+
+            // Floor divider line
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(10, y + floorHeight);
+            ctx.lineTo(canvas.width - 10, y + floorHeight);
+            ctx.stroke();
+
+            // Floor label badge
+            ctx.fillStyle = '#e94560';
+            this.roundRect(ctx, 15, y + floorHeight / 2 - 15, 55, 30, 6);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`F${f}`, 42, y + floorHeight / 2 + 5);
+            ctx.textAlign = 'left';
+
+            // Draw up/down buttons
+            const floor = this.building.getFloor(f);
+            const btnX = 75;
+            const btnY = y + floorHeight / 2 - 12;
+
+            // Up button
+            if (f < this.numFloors - 1) {
+                ctx.fillStyle = floor.upButtonPressed ? '#4ECDC4' : 'rgba(78, 205, 196, 0.3)';
+                this.roundRect(ctx, btnX, btnY - 2, 20, 12, 3);
+                ctx.fill();
+                ctx.fillStyle = floor.upButtonPressed ? '#1a1a2e' : 'rgba(255,255,255,0.5)';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('▲', btnX + 10, btnY + 7);
+            }
+
+            // Down button
+            if (f > 0) {
+                ctx.fillStyle = floor.downButtonPressed ? '#FF6B6B' : 'rgba(255, 107, 107, 0.3)';
+                this.roundRect(ctx, btnX, btnY + 14, 20, 12, 3);
+                ctx.fill();
+                ctx.fillStyle = floor.downButtonPressed ? '#1a1a2e' : 'rgba(255,255,255,0.5)';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('▼', btnX + 10, btnY + 23);
+            }
+            ctx.textAlign = 'left';
         }
 
         // Draw elevators
         for (let i = 0; i < this.building.elevators.length; i++) {
             const elevator = this.building.elevators[i];
-            const x = elevatorStartX + i * elevatorWidth;
+            const x = elevatorStartX + i * (elevatorWidth + elevatorGap);
             const y = canvas.height - (elevator.currentFloor + 1) * floorHeight;
-            ctx.strokeRect(x, y, elevatorWidth, floorHeight);
-            // Draw elevator destination
-            ctx.fillText(`Dest: ${elevator.destinationFloor}`, x + 5, y + 20);
+
+            // Elevator car shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            this.roundRect(ctx, x + 4, y + 6, elevatorWidth - 8, floorHeight - 10, 8);
+            ctx.fill();
+
+            // Elevator car body
+            const elevGradient = ctx.createLinearGradient(x, y, x + elevatorWidth, y);
+            elevGradient.addColorStop(0, '#2d4a6d');
+            elevGradient.addColorStop(0.5, '#3d5a7d');
+            elevGradient.addColorStop(1, '#2d4a6d');
+            ctx.fillStyle = elevGradient;
+            this.roundRect(ctx, x, y + 2, elevatorWidth - 8, floorHeight - 8, 8);
+            ctx.fill();
+
+            // Elevator doors
+            ctx.fillStyle = '#1a1a2e';
+            const doorWidth = (elevatorWidth - 20) / 2 - 2;
+            ctx.fillRect(x + 6, y + 20, doorWidth, floorHeight - 35);
+            ctx.fillRect(x + 10 + doorWidth, y + 20, doorWidth, floorHeight - 35);
+
+            // Elevator floor indicator
+            ctx.fillStyle = '#e94560';
+            this.roundRect(ctx, x + (elevatorWidth - 8) / 2 - 15, y + 6, 30, 14, 4);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`F${elevator.currentFloor}`, x + (elevatorWidth - 8) / 2, y + 16);
+
+            // Direction indicator
+            const direction = elevator.destinationFloor > elevator.currentFloor ? '▲' :
+                             elevator.destinationFloor < elevator.currentFloor ? '▼' : '●';
+            const dirColor = elevator.destinationFloor > elevator.currentFloor ? '#4ECDC4' :
+                            elevator.destinationFloor < elevator.currentFloor ? '#FF6B6B' : '#888';
+            ctx.fillStyle = dirColor;
+            ctx.font = '12px Arial';
+            ctx.fillText(direction, x + (elevatorWidth - 8) / 2 + 22, y + 16);
+            ctx.textAlign = 'left';
+
             // Draw people in elevator
             const people = elevator.queue.people;
-            const numRows = 2;
-            const peoplePerRow = 2;
-            for (let row = 0; row < numRows; row++) {
-                for (let col = 0; col < peoplePerRow; col++) {
-                    const index = row * peoplePerRow + col;
-                    if (index >= people.length) break;
-                    const p = people[index];
-                    const personX = x + 10 + col * 25;
-                    const personY = y + floorHeight / 2 - 15 + row * 30;
-                    ctx.beginPath();
-                    ctx.arc(personX, personY, personRadius, 0, 2 * Math.PI);
-                    ctx.fill();
-                    ctx.fillStyle = 'white';
-                    ctx.fillText(p.destinationFloor.toString(), personX - 3, personY + 3);
-                    ctx.fillStyle = 'black';
-                }
+            const maxPerRow = 2;
+            for (let idx = 0; idx < people.length; idx++) {
+                const p = people[idx];
+                const row = Math.floor(idx / maxPerRow);
+                const col = idx % maxPerRow;
+                const personX = x + 20 + col * 30;
+                const personY = y + 35 + row * 30;
+
+                // Person shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.arc(personX + 2, personY + 2, personRadius, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Person circle
+                ctx.fillStyle = this.getPersonColor(p.destinationFloor);
+                ctx.beginPath();
+                ctx.arc(personX, personY, personRadius, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Person border
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Destination text
+                ctx.fillStyle = '#1a1a2e';
+                ctx.font = 'bold 11px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(p.destinationFloor.toString(), personX, personY + 4);
+                ctx.textAlign = 'left';
             }
+
+            // Elevator label
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Elevator ${i + 1}`, x + (elevatorWidth - 8) / 2, y + floorHeight - 12);
+            ctx.textAlign = 'left';
         }
 
         // Draw people on floors
         for (let f = 0; f < this.numFloors; f++) {
             const floor = this.building.getFloor(f);
-            const y = canvas.height - (f + 1) * floorHeight + floorHeight / 2;
+            const y = canvas.height - (f + 1) * floorHeight;
             const people = floor.queue.people;
-            const numRows = 2;
-            const peoplePerRow = Math.ceil(people.length / numRows);
-            for (let row = 0; row < numRows; row++) {
-                for (let col = 0; col < peoplePerRow; col++) {
-                    const index = row * peoplePerRow + col;
-                    if (index >= people.length) break;
-                    const p = people[index];
-                    const personX = 100 + col * 25;
-                    const personY = y - 15 + row * 30;
-                    ctx.beginPath();
-                    ctx.arc(personX, personY, personRadius, 0, 2 * Math.PI);
-                    ctx.fill();
-                    ctx.fillStyle = 'white';
-                    ctx.fillText(p.destinationFloor.toString(), personX - 3, personY + 3);
-                    ctx.fillStyle = 'black';
-                }
+            const startX = 105;
+            const maxPerRow = 8;
+
+            for (let idx = 0; idx < people.length; idx++) {
+                const p = people[idx];
+                const row = Math.floor(idx / maxPerRow);
+                const col = idx % maxPerRow;
+                const personX = startX + col * 32;
+                const personY = y + 25 + row * 35;
+
+                // Person shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.arc(personX + 2, personY + 2, personRadius, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Person circle with destination color
+                ctx.fillStyle = this.getPersonColor(p.destinationFloor);
+                ctx.beginPath();
+                ctx.arc(personX, personY, personRadius, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Person border
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Destination text
+                ctx.fillStyle = '#1a1a2e';
+                ctx.font = 'bold 11px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(p.destinationFloor.toString(), personX, personY + 4);
+                ctx.textAlign = 'left';
             }
         }
 
-        // Draw timer
-        ctx.fillText(`Timer: ${this.timer}`, 10, 20);
+        // Legend
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.font = '10px Arial';
+        ctx.fillText('● Person (number = destination floor)', 15, canvas.height - 8);
     }
 }
 export { Simulation };
