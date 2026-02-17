@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Dart Master</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a12;
+    color: #d8d8e4;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 38% 45%, rgba(0, 200, 255, 0.035) 0%, transparent 55%),
+                radial-gradient(ellipse at 70% 60%, rgba(255, 100, 40, 0.02) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  #app {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 28px;
+    padding: 24px 20px;
+    min-height: 100vh;
+  }
+
+  #board-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  canvas#game {
+    display: block;
+    cursor: crosshair;
+  }
+
+  #phase {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #00d4f0;
+    text-align: center;
+    padding: 8px 16px;
+    min-height: 34px;
+    transition: color 0.3s;
+  }
+
+  #phase.idle { animation: pulse 1.6s ease-in-out infinite; }
+  #phase.result { color: #ffd700; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+  }
+
+  #sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 210px;
+    max-width: 240px;
+    padding-top: 6px;
+  }
+
+  .logo {
+    font-family: 'Teko', sans-serif;
+    font-weight: 700;
+    font-size: 52px;
+    letter-spacing: 5px;
+    line-height: 1;
+    color: #00d4f0;
+    text-shadow: 0 0 24px rgba(0, 212, 240, 0.35), 0 0 60px rgba(0, 212, 240, 0.1);
+  }
+
+  .logo span {
+    color: #ff6b35;
+    text-shadow: 0 0 24px rgba(255, 107, 53, 0.35), 0 0 60px rgba(255, 107, 53, 0.1);
+  }
+
+  .card {
+    background: rgba(14, 14, 26, 0.85);
+    border: 1px solid rgba(0, 200, 255, 0.08);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+
+  .card-label {
+    font-size: 10px;
+    color: #555580;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .card-value {
+    font-family: 'Teko', sans-serif;
+    font-weight: 600;
+    font-size: 54px;
+    line-height: 1;
+    color: #ffd700;
+    text-shadow: 0 0 18px rgba(255, 215, 0, 0.25);
+  }
+
+  .card-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .card-row .card {
+    flex: 1;
+    padding: 10px 12px;
+  }
+
+  .card-row .card-value {
+    font-size: 30px;
+    color: #d0d0e0;
+    text-shadow: none;
+  }
+
+  .card-row .card-value.miss { color: #e84040; }
+  .card-row .card-value.bull { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+  .card-row .card-value.hit  { color: #00d4f0; text-shadow: 0 0 10px rgba(0, 212, 240, 0.3); }
+
+  #history {
+    max-height: 210px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 200, 255, 0.15) transparent;
+  }
+
+  .h-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    font-size: 12px;
+    color: #666688;
+  }
+
+  .h-row:first-child { color: #b0b0cc; }
+  .h-row .h-label { flex: 1; }
+  .h-row .h-pts {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    min-width: 48px;
+    color: #8080a0;
+  }
+
+  .h-type-bull   { color: #ffd700 !important; }
+  .h-type-treble { color: #00d4f0 !important; }
+  .h-type-double { color: #ff6b35 !important; }
+  .h-type-miss   { color: #e84040 !important; }
+
+  @media (max-width: 720px) {
+    #app {
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 10px;
+    }
+
+    #sidebar {
+      width: 100%;
+      max-width: 400px;
+      min-width: unset;
+    }
+
+    .logo {
+      font-size: 38px;
+      text-align: center;
+    }
+
+    .card-value { font-size: 42px; }
+    .card-row .card-value { font-size: 26px; }
+    #history { max-height: 140px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="board-col">
+    <canvas id="game"></canvas>
+    <div id="phase" class="idle">PRESS SPACE OR TAP TO START</div>
+  </div>
+  <div id="sidebar">
+    <div class="logo">DART<span>MASTER</span></div>
+
+    <div class="card">
+      <div class="card-label">Total Score</div>
+      <div class="card-value" id="totalScore">0</div>
+    </div>
+
+    <div class="card-row">
+      <div class="card">
+        <div class="card-label">Darts</div>
+        <div class="card-value" id="dartCount">0</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Last</div>
+        <div class="card-value" id="lastScore">&mdash;</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Avg</div>
+        <div class="card-value" id="avgScore">&mdash;</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">History</div>
+      <div id="history"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== CONSTANTS ===== */
+const SEG_ORDER = [20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
+const SEG_ANGLE = Math.PI * 2 / 20;
+
+const R = {
+  bullseye:     0.037,
+  bull:         0.094,
+  innerTreble:  0.582,
+  outerTreble:  0.629,
+  innerDouble:  0.953,
+  outerDouble:  1.0
+};
+
+const CLR = {
+  black: '#1c1c28', cream: '#f2e0b6',
+  red: '#d42e35',   green: '#18843c',
+  wire: '#7c848e',  surround: '#16161e'
+};
+
+/* ===== STATE ===== */
+const S = {
+  phase: 'idle',        // idle | vertical | horizontal | result
+  vPos: 0, hPos: 0,
+  vTime: 0, hTime: 0,
+  lockedV: 0, lockedH: 0,
+  speed: 4.4,
+  totalScore: 0,
+  darts: 0,
+  history: [],          // {num, label, score, type}
+  markers: [],          // {v, h}  stored as normalized oscillation values
+  lastResult: null,
+  resultTimer: 0,
+  resultDur: 1.7,
+  particles: [],
+  popups: []
+};
+
+/* ===== CANVAS SETUP ===== */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const dpr = window.devicePixelRatio || 1;
+let W, cx, cy, bR, amp;
+let boardImg = null;
+
+function resize() {
+  const mobile = window.innerWidth <= 720;
+  const maxH = window.innerHeight - (mobile ? 260 : 80);
+  const maxW = mobile ? window.innerWidth - 20 : window.innerWidth * 0.48;
+  const size = Math.round(Math.min(maxW, maxH, 560));
+
+  W = size;
+  canvas.width  = W * dpr;
+  canvas.height = W * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = W + 'px';
+
+  cx  = W / 2;
+  cy  = W / 2;
+  bR  = W * 0.38;
+  amp = bR * 1.14;
+
+  cacheBoard();
+}
+
+/* ===== BOARD CACHE ===== */
+function cacheBoard() {
+  const off = document.createElement('canvas');
+  off.width  = W * dpr;
+  off.height = W * dpr;
+  const c = off.getContext('2d');
+  c.scale(dpr, dpr);
+  renderBoard(c);
+  boardImg = off;
+}
+
+function renderBoard(c) {
+  // shadow
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,0.45)';
+  c.shadowBlur = 36;
+  c.beginPath(); c.arc(cx, cy, bR * 1.19, 0, Math.PI * 2);
+  c.fillStyle = CLR.surround; c.fill();
+  c.restore();
+
+  // number surround ring (dark)
+  c.beginPath(); c.arc(cx, cy, bR * 1.19, 0, Math.PI * 2);
+  c.fillStyle = CLR.surround; c.fill();
+
+  // segments
+  for (let i = 0; i < 20; i++) {
+    const sa = -Math.PI / 2 + (i - 0.5) * SEG_ANGLE;
+    const ea = sa + SEG_ANGLE;
+    const even = i % 2 === 0;
+    const base   = even ? CLR.black : CLR.cream;
+    const accent = even ? CLR.red   : CLR.green;
+
+    seg(c, R.innerDouble, R.outerDouble, sa, ea, accent);
+    seg(c, R.outerTreble, R.innerDouble, sa, ea, base);
+    seg(c, R.innerTreble, R.outerTreble, sa, ea, accent);
+    seg(c, R.bull,        R.innerTreble, sa, ea, base);
+  }
+
+  // bull
+  c.beginPath(); c.arc(cx, cy, R.bull * bR, 0, Math.PI * 2);
+  c.fillStyle = CLR.green; c.fill();
+
+  // bullseye
+  c.beginPath(); c.arc(cx, cy, R.bullseye * bR, 0, Math.PI * 2);
+  c.fillStyle = CLR.red; c.fill();
+
+  // wires — radial
+  c.strokeStyle = CLR.wire;
+  c.lineWidth = 1;
+  for (let i = 0; i < 20; i++) {
+    const a = -Math.PI / 2 + (i - 0.5) * SEG_ANGLE;
+    c.beginPath();
+    c.moveTo(cx + Math.cos(a) * R.bull * bR, cy + Math.sin(a) * R.bull * bR);
+    c.lineTo(cx + Math.cos(a) * R.outerDouble * bR, cy + Math.sin(a) * R.outerDouble * bR);
+    c.stroke();
+  }
+
+  // wires — rings
+  [R.bullseye, R.bull, R.innerTreble, R.outerTreble, R.innerDouble, R.outerDouble].forEach(r => {
+    c.beginPath(); c.arc(cx, cy, r * bR, 0, Math.PI * 2); c.stroke();
+  });
+
+  // outer rim
+  c.lineWidth = 2;
+  c.strokeStyle = '#2a2a38';
+  c.beginPath(); c.arc(cx, cy, bR * 1.19, 0, Math.PI * 2); c.stroke();
+
+  // numbers
+  c.fillStyle = '#ccc8ba';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  const nR = bR * 1.095;
+  const fs = Math.max(12, Math.round(bR * 0.095));
+  c.font = `700 ${fs}px Teko, sans-serif`;
+  for (let i = 0; i < 20; i++) {
+    const a = -Math.PI / 2 + i * SEG_ANGLE;
+    c.fillText(SEG_ORDER[i], cx + Math.cos(a) * nR, cy + Math.sin(a) * nR + 1);
+  }
+}
+
+function seg(c, ri, ro, sa, ea, col) {
+  c.beginPath();
+  c.arc(cx, cy, ro * bR, sa, ea);
+  c.arc(cx, cy, ri * bR, ea, sa, true);
+  c.closePath();
+  c.fillStyle = col;
+  c.fill();
+}
+
+/* ===== SCORING ===== */
+function calcScore(px, py) {
+  const dx = px - cx, dy = py - cy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const r = dist / bR;
+
+  if (r <= R.bullseye) return { score: 50, label: 'BULL 50', type: 'bull' };
+  if (r <= R.bull)     return { score: 25, label: 'BULL 25', type: 'bull' };
+  if (r >  R.outerDouble) return { score: 0, label: 'MISS', type: 'miss' };
+
+  let ang = Math.atan2(dx, -dy);
+  if (ang < 0) ang += Math.PI * 2;
+  ang += Math.PI / 20;
+  if (ang >= Math.PI * 2) ang -= Math.PI * 2;
+  const idx = Math.floor(ang / (Math.PI / 10)) % 20;
+  const num = SEG_ORDER[idx];
+
+  if (r >= R.innerDouble)                        return { score: num * 2, label: 'D' + num, type: 'double' };
+  if (r >= R.innerTreble && r <= R.outerTreble)  return { score: num * 3, label: 'T' + num, type: 'treble' };
+  return { score: num, label: '' + num, type: 'single' };
+}
+
+/* ===== PARTICLES ===== */
+function spawnBurst(x, y, n, color) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = Math.random() * 2.8 + 0.6;
+    S.particles.push({
+      x, y,
+      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      life: 1, decay: Math.random() * 0.022 + 0.014,
+      sz: Math.random() * 2.8 + 0.6, color
+    });
+  }
+}
+
+function tickParticles() {
+  for (let i = S.particles.length - 1; i >= 0; i--) {
+    const p = S.particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.life -= p.decay;
+    if (p.life <= 0) S.particles.splice(i, 1);
+  }
+}
+
+function drawParticles(c) {
+  S.particles.forEach(p => {
+    c.globalAlpha = p.life;
+    c.fillStyle = p.color;
+    c.beginPath(); c.arc(p.x, p.y, p.sz, 0, Math.PI * 2); c.fill();
+  });
+  c.globalAlpha = 1;
+}
+
+/* ===== POPUPS ===== */
+function spawnPopup(x, y, txt, col) {
+  S.popups.push({ x, y, txt, col, age: 0 });
+}
+
+function tickPopups(dt) {
+  for (let i = S.popups.length - 1; i >= 0; i--) {
+    S.popups[i].age += dt;
+    if (S.popups[i].age > 1.5) S.popups.splice(i, 1);
+  }
+}
+
+function drawPopups(c) {
+  const fs = Math.max(16, Math.round(bR * 0.11));
+  S.popups.forEach(p => {
+    const t = p.age;
+    const alpha = Math.max(0, 1 - t / 1.3);
+    const rise = t * 35;
+    const sc = 1 + t * 0.25;
+    c.save();
+    c.translate(p.x, p.y - rise);
+    c.scale(sc, sc);
+    c.globalAlpha = alpha;
+    c.font = `700 ${fs}px Teko, sans-serif`;
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    // shadow
+    c.shadowColor = p.col; c.shadowBlur = 14;
+    c.fillStyle = p.col;
+    c.fillText(p.txt, 0, 0);
+    c.shadowBlur = 0;
+    c.restore();
+  });
+  c.globalAlpha = 1;
+}
+
+/* ===== MARKERS ===== */
+function drawMarkers(c) {
+  S.markers.forEach((d, i) => {
+    const x = cx + d.h * amp;
+    const y = cy + d.v * amp;
+    const last = (i === S.markers.length - 1) && S.phase === 'result';
+    c.globalAlpha = last ? 1 : 0.45;
+
+    // outer
+    c.beginPath(); c.arc(x, y, 4.5, 0, Math.PI * 2);
+    c.fillStyle = '#e8e8e8'; c.fill();
+    // inner
+    c.beginPath(); c.arc(x, y, 1.8, 0, Math.PI * 2);
+    c.fillStyle = '#222'; c.fill();
+
+    if (last) {
+      c.beginPath(); c.arc(x, y, 9, 0, Math.PI * 2);
+      c.strokeStyle = 'rgba(0,212,240,0.55)'; c.lineWidth = 1.8; c.stroke();
+    }
+  });
+  c.globalAlpha = 1;
+}
+
+/* ===== TARGETING LINES ===== */
+function drawLine(c, vert, pos, active) {
+  const px = vert ? cy + pos * amp : cx + pos * amp;
+  const ext = bR * 1.22;
+  const rgb = active ? '0,212,240' : '255,107,53';
+
+  const layers = [
+    { w: 20, a: 0.035 },
+    { w: 11, a: 0.07 },
+    { w: 5,  a: 0.16 },
+    { w: 2.4,a: 0.4 },
+    { w: 1.1,a: 0.85 }
+  ];
+
+  layers.forEach(l => {
+    c.strokeStyle = `rgba(${rgb},${l.a})`;
+    c.lineWidth = l.w;
+    c.beginPath();
+    if (vert) { c.moveTo(cx - ext, px); c.lineTo(cx + ext, px); }
+    else      { c.moveTo(px, cy - ext); c.lineTo(px, cy + ext); }
+    c.stroke();
+  });
+}
+
+function drawCross(c, x, y) {
+  c.strokeStyle = 'rgba(255,255,255,0.6)';
+  c.lineWidth = 1;
+  const s = 9;
+  c.beginPath();
+  c.moveTo(x - s, y); c.lineTo(x - 3, y);
+  c.moveTo(x + 3, y); c.lineTo(x + s, y);
+  c.moveTo(x, y - s); c.lineTo(x, y - 3);
+  c.moveTo(x, y + 3); c.lineTo(x, y + s);
+  c.stroke();
+}
+
+/* ===== GAME LOOP ===== */
+let lastT = null;
+
+function loop(ts) {
+  if (lastT === null) lastT = ts;
+  const dt = Math.min((ts - lastT) / 1000, 0.05);
+  lastT = ts;
+
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+function update(dt) {
+  if (S.phase === 'vertical') {
+    S.vTime += dt;
+    S.vPos = Math.sin(S.vTime * S.speed);
+  } else if (S.phase === 'horizontal') {
+    S.hTime += dt;
+    S.hPos = Math.sin(S.hTime * S.speed);
+  } else if (S.phase === 'result') {
+    S.resultTimer += dt;
+    if (S.resultTimer >= S.resultDur) {
+      S.phase = 'vertical';
+      S.vTime = Math.random() * Math.PI * 2;
+      setPhase();
+    }
+  }
+  tickParticles();
+  tickPopups(dt);
+}
+
+function render() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, W);
+
+  // cached board
+  if (boardImg) ctx.drawImage(boardImg, 0, 0, W, W);
+
+  // markers
+  drawMarkers(ctx);
+
+  // lines
+  if (S.phase === 'vertical') {
+    drawLine(ctx, true, S.vPos, true);
+  } else if (S.phase === 'horizontal') {
+    drawLine(ctx, true, S.lockedV, false);
+    drawLine(ctx, false, S.hPos, true);
+    drawCross(ctx, cx + S.hPos * amp, cy + S.lockedV * amp);
+  } else if (S.phase === 'result') {
+    const fade = Math.max(0, 1 - S.resultTimer / 0.7);
+    if (fade > 0) {
+      ctx.globalAlpha = fade * 0.45;
+      drawLine(ctx, true, S.lockedV, false);
+      drawLine(ctx, false, S.lockedH, false);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  drawParticles(ctx);
+  drawPopups(ctx);
+}
+
+/* ===== INPUT ===== */
+function go() {
+  if (S.phase === 'idle') {
+    S.phase = 'vertical';
+    S.vTime = Math.random() * Math.PI * 2;
+    setPhase();
+  } else if (S.phase === 'vertical') {
+    S.lockedV = S.vPos;
+    S.phase = 'horizontal';
+    S.hTime = Math.random() * Math.PI * 2;
+    setPhase();
+  } else if (S.phase === 'horizontal') {
+    S.lockedH = S.hPos;
+    throwDart();
+  }
+}
+
+function throwDart() {
+  S.phase = 'result';
+  S.resultTimer = 0;
+
+  const dx = cx + S.lockedH * amp;
+  const dy = cy + S.lockedV * amp;
+  const res = calcScore(dx, dy);
+
+  S.totalScore += res.score;
+  S.darts++;
+  S.lastResult = res;
+  S.markers.push({ v: S.lockedV, h: S.lockedH });
+  if (S.markers.length > 24) S.markers.shift();
+
+  S.history.unshift({ num: S.darts, label: res.label, score: res.score, type: res.type });
+  if (S.history.length > 15) S.history.pop();
+
+  // effects
+  const pc = res.type === 'miss' ? '#e84040' : res.type === 'bull' ? '#ffd700' : '#00d4f0';
+  spawnBurst(dx, dy, res.type === 'bull' ? 36 : 20, pc);
+  const tc = res.score === 0 ? '#e84040' : res.score >= 40 ? '#ffd700' : '#00d4f0';
+  spawnPopup(dx, dy, res.score === 0 ? 'MISS!' : '+' + res.score, tc);
+
+  refreshUI();
+  setPhase();
+}
+
+/* ===== UI ===== */
+function refreshUI() {
+  document.getElementById('totalScore').textContent = S.totalScore;
+  document.getElementById('dartCount').textContent = S.darts;
+
+  const le = document.getElementById('lastScore');
+  if (S.lastResult) {
+    le.textContent = S.lastResult.score;
+    le.className = 'card-value ' + (
+      S.lastResult.type === 'miss' ? 'miss' :
+      S.lastResult.type === 'bull' ? 'bull' : 'hit'
+    );
+  }
+
+  document.getElementById('avgScore').textContent =
+    S.darts > 0 ? (S.totalScore / S.darts).toFixed(1) : '\u2014';
+
+  const h = document.getElementById('history');
+  h.innerHTML = S.history.map(e => {
+    const tc = 'h-type-' + e.type;
+    return `<div class="h-row"><span class="h-label">#${e.num} <span class="${tc}">${e.label}</span></span><span class="h-pts">${e.score} pts</span></div>`;
+  }).join('');
+}
+
+function setPhase() {
+  const el = document.getElementById('phase');
+  switch (S.phase) {
+    case 'idle':
+      el.textContent = 'PRESS SPACE OR TAP TO START';
+      el.className = 'idle'; break;
+    case 'vertical':
+      el.textContent = '\u2195  LOCK VERTICAL POSITION';
+      el.className = ''; break;
+    case 'horizontal':
+      el.textContent = '\u2194  LOCK HORIZONTAL POSITION';
+      el.className = ''; break;
+    case 'result':
+      el.textContent = S.lastResult
+        ? (S.lastResult.score > 0 ? S.lastResult.label + '!' : 'MISS!')
+        : '';
+      el.className = 'result'; break;
+  }
+}
+
+/* ===== EVENTS ===== */
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); go(); }
+});
+
+canvas.addEventListener('click', e => { e.preventDefault(); go(); });
+canvas.addEventListener('touchstart', e => { e.preventDefault(); go(); }, { passive: false });
+
+// also allow tapping the phase text area
+document.getElementById('phase').addEventListener('click', e => { e.preventDefault(); go(); });
+document.getElementById('phase').addEventListener('touchstart', e => { e.preventDefault(); go(); }, { passive: false });
+
+window.addEventListener('resize', resize);
+
+/* ===== INIT ===== */
+resize();
+setPhase();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

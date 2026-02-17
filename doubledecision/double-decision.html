@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Double Decision</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #06060f;
+    --cyan: #00d4ff;
+    --purple: #8b5cf6;
+    --pink: #f472b6;
+    --green: #34d399;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --surface: rgba(255,255,255,0.04);
+    --glass: rgba(255,255,255,0.06);
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --arena-size: min(80vmin, 600px);
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Rajdhani', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(139,92,246,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 100%, rgba(0,212,255,0.05) 0%, transparent 50%),
+      var(--bg);
+  }
+
+  /* === SCANLINE OVERLAY === */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* === HEADER HUD === */
+  .hud {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(16px, 4vw, 48px);
+    padding: 20px 24px 12px;
+    width: 100%;
+    max-width: 700px;
+    z-index: 10;
+  }
+
+  .hud-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .hud-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .hud-value {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(20px, 4vw, 32px);
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 20px rgba(0,212,255,0.4);
+    min-width: 60px;
+    text-align: center;
+  }
+
+  .hud-value.speed { color: var(--purple); text-shadow: 0 0 20px rgba(139,92,246,0.4); }
+  .hud-value.streak { color: var(--yellow); text-shadow: 0 0 20px rgba(251,191,36,0.4); }
+
+  /* === MAIN GAME AREA === */
+  .game-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 100%;
+  }
+
+  .arena {
+    position: relative;
+    width: var(--arena-size);
+    height: var(--arena-size);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(15,15,30,1) 0%, rgba(6,6,15,1) 100%);
+    border: 1px solid rgba(0,212,255,0.1);
+    box-shadow:
+      0 0 60px rgba(0,212,255,0.03),
+      inset 0 0 80px rgba(0,0,0,0.5);
+    overflow: visible;
+  }
+
+  /* pulsing ring during flash */
+  .arena::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .arena.flashing::before {
+    border-color: var(--cyan);
+    box-shadow: 0 0 30px rgba(0,212,255,0.3), inset 0 0 30px rgba(0,212,255,0.05);
+    animation: pulse-ring 0.4s ease-out;
+  }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.06); opacity: 0.3; }
+  }
+
+  /* grid lines inside arena */
+  .arena::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, transparent 30%, rgba(0,212,255,0.02) 60%, transparent 61%),
+      radial-gradient(circle, transparent 55%, rgba(0,212,255,0.015) 56%, transparent 57%);
+    pointer-events: none;
+  }
+
+  .crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px; height: 20px;
+    opacity: 0.25;
+  }
+  .crosshair::before, .crosshair::after {
+    content: '';
+    position: absolute;
+    background: var(--cyan);
+  }
+  .crosshair::before { width: 1px; height: 100%; left: 50%; top: 0; }
+  .crosshair::after { height: 1px; width: 100%; top: 50%; left: 0; }
+
+  /* === FLASH OBJECTS === */
+  .flash-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.02s;
+  }
+  .flash-layer.visible { opacity: 1; }
+
+  .central-object {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .peripheral-target {
+    position: absolute;
+    transform: translate(-50%, -50%);
+  }
+
+  .distractor {
+    position: absolute;
+    transform: translate(-50%, -50%);
+  }
+
+  /* === QUESTION OVERLAYS === */
+  .question-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 20;
+  }
+  .question-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .question-text {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(11px, 2.5vw, 15px);
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 28px;
+    text-align: center;
+    padding: 0 20px;
+  }
+
+  .choices {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .choice-btn {
+    background: var(--surface);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 12px;
+    padding: 16px 28px;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 140px;
+    justify-content: center;
+  }
+  .choice-btn:hover {
+    background: rgba(0,212,255,0.08);
+    border-color: var(--cyan);
+    box-shadow: 0 0 20px rgba(0,212,255,0.1);
+    transform: translateY(-2px);
+  }
+  .choice-btn:active {
+    transform: translateY(0);
+  }
+
+  .choice-btn svg {
+    width: 40px;
+    height: 24px;
+  }
+
+  /* === LOCATION PICKER === */
+  .location-picker {
+    position: absolute;
+    inset: 0;
+  }
+
+  .loc-btn {
+    position: absolute;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--glass);
+    border: 1px solid rgba(0,212,255,0.15);
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .loc-btn::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(0,212,255,0.3);
+    transition: all 0.15s;
+  }
+  .loc-btn:hover {
+    background: rgba(0,212,255,0.12);
+    border-color: var(--cyan);
+    box-shadow: 0 0 20px rgba(0,212,255,0.2);
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  .loc-btn:hover::before {
+    background: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan);
+  }
+
+  /* === FEEDBACK === */
+  .feedback-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 30;
+  }
+  .feedback-overlay.active { opacity: 1; pointer-events: auto; }
+
+  .feedback-icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: 14px;
+    animation: feedback-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .feedback-icon.perfect {
+    background: rgba(52,211,153,0.15);
+    border: 2px solid var(--green);
+    box-shadow: 0 0 30px rgba(52,211,153,0.2);
+    color: var(--green);
+  }
+  .feedback-icon.partial {
+    background: rgba(251,191,36,0.12);
+    border: 2px solid var(--yellow);
+    box-shadow: 0 0 30px rgba(251,191,36,0.2);
+    color: var(--yellow);
+  }
+  .feedback-icon.miss {
+    background: rgba(248,113,113,0.12);
+    border: 2px solid var(--red);
+    box-shadow: 0 0 30px rgba(248,113,113,0.2);
+    color: var(--red);
+  }
+
+  @keyframes feedback-pop {
+    0% { transform: scale(0.3); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .feedback-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .feedback-text.perfect { color: var(--green); }
+  .feedback-text.partial { color: var(--yellow); }
+  .feedback-text.miss { color: var(--red); }
+
+  .feedback-detail {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
+
+  /* === INTRO SCREEN === */
+  .intro-screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    background: var(--bg);
+    transition: opacity 0.5s, visibility 0.5s;
+  }
+  .intro-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .intro-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(28px, 6vw, 52px);
+    font-weight: 900;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  .intro-subtitle {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(13px, 2.5vw, 16px);
+    color: var(--text-dim);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+
+  .intro-rules {
+    max-width: 420px;
+    padding: 0 24px;
+    margin-bottom: 48px;
+  }
+
+  .rule {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .rule-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--cyan);
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 6px;
+    width: 28px; height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .rule-text {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text-dim);
+  }
+  .rule-text strong { color: var(--text); font-weight: 600; }
+
+  .start-btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    border: none;
+    border-radius: 50px;
+    padding: 16px 52px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 0 30px rgba(0,212,255,0.2);
+  }
+  .start-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 50px rgba(0,212,255,0.35);
+  }
+  .start-btn:active { transform: translateY(0); }
+
+  /* === MISC === */
+  .hidden { display: none !important; }
+
+  .trial-counter {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    opacity: 0.5;
+  }
+
+  /* ready prompt */
+  .ready-prompt {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 15;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .ready-prompt.active { opacity: 1; pointer-events: auto; }
+
+  .ready-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    animation: ready-blink 1.8s ease-in-out infinite;
+  }
+
+  @keyframes ready-blink {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  /* distractor triangles */
+  .distractor-shape {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 0; height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 20px solid rgba(139,92,246,0.3);
+  }
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<div class="intro-screen" id="intro">
+  <div class="intro-title">DOUBLE DECISION</div>
+  <div class="intro-subtitle">Visual Processing Trainer</div>
+  <div class="intro-rules">
+    <div class="rule">
+      <div class="rule-num">1</div>
+      <div class="rule-text">A <strong>brief flash</strong> will appear showing a vehicle in the center and a road sign somewhere around it.</div>
+    </div>
+    <div class="rule">
+      <div class="rule-num">2</div>
+      <div class="rule-text">First, identify the <strong>center vehicle</strong> &mdash; was it a car or a truck?</div>
+    </div>
+    <div class="rule">
+      <div class="rule-num">3</div>
+      <div class="rule-text">Then, recall <strong>where</strong> the road sign appeared around the circle.</div>
+    </div>
+    <div class="rule">
+      <div class="rule-num">4</div>
+      <div class="rule-text">Get both right and the flash gets <strong>faster</strong>. Train your peripheral vision!</div>
+    </div>
+  </div>
+  <button class="start-btn" id="startBtn">BEGIN</button>
+</div>
+
+<!-- HUD -->
+<div class="hud" id="hud">
+  <div class="hud-item">
+    <div class="hud-label">Score</div>
+    <div class="hud-value" id="score">0</div>
+  </div>
+  <div class="hud-item">
+    <div class="hud-label">Speed</div>
+    <div class="hud-value speed" id="speed">3.0s</div>
+  </div>
+  <div class="hud-item">
+    <div class="hud-label">Streak</div>
+    <div class="hud-value streak" id="streak">0</div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="game-wrap">
+  <div class="arena" id="arena">
+    <div class="crosshair"></div>
+
+    <!-- flash layer -->
+    <div class="flash-layer" id="flashLayer"></div>
+
+    <!-- ready prompt -->
+    <div class="ready-prompt" id="readyPrompt">
+      <div class="ready-text">CLICK TO START TRIAL</div>
+    </div>
+
+    <!-- question 1: vehicle -->
+    <div class="question-overlay" id="q1">
+      <div class="question-text">What did you see in the center?</div>
+      <div class="choices">
+        <button class="choice-btn" data-answer="car">
+          <svg viewBox="0 0 60 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="8" width="50" height="14" rx="4" fill="currentColor" opacity="0.7"/>
+            <path d="M15 8 Q18 1 28 1 L36 1 Q42 1 45 8" fill="currentColor" opacity="0.5"/>
+            <circle cx="16" cy="24" r="4" fill="currentColor" opacity="0.9"/>
+            <circle cx="44" cy="24" r="4" fill="currentColor" opacity="0.9"/>
+          </svg>
+          Car
+        </button>
+        <button class="choice-btn" data-answer="truck">
+          <svg viewBox="0 0 70 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="4" width="40" height="18" rx="2" fill="currentColor" opacity="0.6"/>
+            <rect x="44" y="8" width="22" height="14" rx="3" fill="currentColor" opacity="0.7"/>
+            <circle cx="14" cy="24" r="4" fill="currentColor" opacity="0.9"/>
+            <circle cx="34" cy="24" r="4" fill="currentColor" opacity="0.9"/>
+            <circle cx="58" cy="24" r="4" fill="currentColor" opacity="0.9"/>
+          </svg>
+          Truck
+        </button>
+      </div>
+    </div>
+
+    <!-- question 2: location -->
+    <div class="question-overlay" id="q2">
+      <div class="question-text" style="position:absolute;top:14%;width:100%;">Where was the road sign?</div>
+      <div class="location-picker" id="locPicker"></div>
+    </div>
+
+    <!-- feedback -->
+    <div class="feedback-overlay" id="feedback">
+      <div class="feedback-icon" id="fbIcon"></div>
+      <div class="feedback-text" id="fbText"></div>
+      <div class="feedback-detail" id="fbDetail"></div>
+    </div>
+  </div>
+</div>
+
+<div class="trial-counter" id="trialCounter">TRIAL 0</div>
+
+<script>
+(() => {
+  // === AUDIO via Web Audio API ===
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  let actx;
+  function ensureAudio() { if (!actx) actx = new AudioCtx(); }
+
+  function playTone(freq, dur, type = 'sine', vol = 0.12) {
+    ensureAudio();
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, actx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    osc.connect(gain).connect(actx.destination);
+    osc.start(); osc.stop(actx.currentTime + dur);
+  }
+
+  function sndCorrect() { playTone(880, 0.12, 'sine', 0.10); setTimeout(() => playTone(1320, 0.15, 'sine', 0.08), 80); }
+  function sndWrong() { playTone(220, 0.25, 'sawtooth', 0.08); }
+  function sndPartial() { playTone(440, 0.15, 'triangle', 0.08); }
+  function sndFlash() {
+    ensureAudio();
+    const buf = actx.createBuffer(1, actx.sampleRate * 0.06, actx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length) * 0.15;
+    const src = actx.createBufferSource();
+    src.buffer = buf;
+    const filt = actx.createBiquadFilter();
+    filt.type = 'highpass'; filt.frequency.value = 3000;
+    src.connect(filt).connect(actx.destination);
+    src.start();
+  }
+
+  // === DOM refs ===
+  const $ = id => document.getElementById(id);
+  const intro = $('intro'), startBtn = $('startBtn');
+  const arena = $('arena'), flashLayer = $('flashLayer');
+  const readyPrompt = $('readyPrompt');
+  const q1 = $('q1'), q2 = $('q2');
+  const feedback = $('feedback'), fbIcon = $('fbIcon'), fbText = $('fbText'), fbDetail = $('fbDetail');
+  const locPicker = $('locPicker');
+  const scoreEl = $('score'), speedEl = $('speed'), streakEl = $('streak'), trialEl = $('trialCounter');
+
+  // === GAME STATE ===
+  let score = 0, flashDuration = 3000, currentStreak = 0, trialNum = 0;
+  let correctVehicle, correctLoc;
+  let answeredVehicle;
+  let phase = 'intro'; // intro | ready | flash | q1 | q2 | feedback
+
+  // 8 positions around the circle (angle in degrees, 0 = top, clockwise)
+  const POSITIONS = [0, 45, 90, 135, 180, 225, 270, 315];
+  const POS_RADIUS_PCT = 38; // % from center
+
+  function posToXY(angleDeg, radiusPct) {
+    const r = angleDeg * Math.PI / 180 - Math.PI / 2; // -90 so 0deg = top
+    // Wait, 0 should be top. Let me recalculate.
+    // 0deg = top means angle from positive-y axis clockwise
+    // In standard math: x = sin(angle), y = -cos(angle)
+    const rad = angleDeg * Math.PI / 180;
+    const x = 50 + Math.sin(rad) * radiusPct;
+    const y = 50 - Math.cos(rad) * radiusPct;
+    return { x, y };
+  }
+
+  // Build location buttons
+  POSITIONS.forEach((angle, i) => {
+    const { x, y } = posToXY(angle, POS_RADIUS_PCT);
+    const btn = document.createElement('button');
+    btn.className = 'loc-btn';
+    btn.style.left = x + '%';
+    btn.style.top = y + '%';
+    btn.dataset.loc = i;
+    btn.addEventListener('click', () => onLocAnswer(i));
+    locPicker.appendChild(btn);
+  });
+
+  // === SVG BUILDERS ===
+  function svgCar() {
+    return `<svg width="70" height="44" viewBox="0 0 70 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="16" width="58" height="18" rx="5" fill="#00d4ff" opacity="0.8"/>
+      <path d="M18 16 Q22 4 34 4 L42 4 Q50 4 54 16" fill="#00d4ff" opacity="0.55"/>
+      <rect x="24" y="7" width="1.5" height="9" fill="#06060f" opacity="0.5"/>
+      <rect x="40" y="7" width="1.5" height="9" fill="#06060f" opacity="0.5"/>
+      <circle cx="20" cy="37" r="6" fill="#00d4ff" opacity="0.9"/>
+      <circle cx="20" cy="37" r="3" fill="#06060f" opacity="0.7"/>
+      <circle cx="52" cy="37" r="6" fill="#00d4ff" opacity="0.9"/>
+      <circle cx="52" cy="37" r="3" fill="#06060f" opacity="0.7"/>
+      <rect x="58" y="20" width="7" height="4" rx="1" fill="#f87171" opacity="0.6"/>
+      <rect x="6" y="20" width="7" height="3" rx="1" fill="#fbbf24" opacity="0.6"/>
+    </svg>`;
+  }
+
+  function svgTruck() {
+    return `<svg width="90" height="48" viewBox="0 0 90 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="8" width="50" height="28" rx="3" fill="#8b5cf6" opacity="0.7"/>
+      <rect x="54" y="14" width="30" height="22" rx="4" fill="#8b5cf6" opacity="0.85"/>
+      <rect x="60" y="17" width="18" height="10" rx="2" fill="#c4b5fd" opacity="0.25"/>
+      <circle cx="18" cy="40" r="6" fill="#8b5cf6" opacity="0.9"/>
+      <circle cx="18" cy="40" r="3" fill="#06060f" opacity="0.7"/>
+      <circle cx="42" cy="40" r="6" fill="#8b5cf6" opacity="0.9"/>
+      <circle cx="42" cy="40" r="3" fill="#06060f" opacity="0.7"/>
+      <circle cx="72" cy="40" r="6" fill="#8b5cf6" opacity="0.9"/>
+      <circle cx="72" cy="40" r="3" fill="#06060f" opacity="0.7"/>
+      <rect x="80" y="18" width="6" height="4" rx="1" fill="#f87171" opacity="0.6"/>
+    </svg>`;
+  }
+
+  function svgSign() {
+    // Route 66 shield shape
+    return `<svg width="36" height="40" viewBox="0 0 36 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 2 L32 8 L34 18 L30 30 L24 36 L18 38 L12 36 L6 30 L2 18 L4 8 Z"
+            fill="#fbbf24" opacity="0.9" stroke="#06060f" stroke-width="1.5"/>
+      <path d="M18 6 L28 10 L30 18 L27 28 L22 33 L18 34.5 L14 33 L9 28 L6 18 L8 10 Z"
+            fill="#06060f" opacity="0.85"/>
+      <text x="18" y="24" text-anchor="middle" font-family="Orbitron,monospace" font-size="11" font-weight="900" fill="#fbbf24">66</text>
+    </svg>`;
+  }
+
+  function svgDistractor(rotation) {
+    return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform:rotate(${rotation}deg)">
+      <polygon points="12,2 22,20 2,20" fill="rgba(139,92,246,0.35)" stroke="rgba(139,92,246,0.2)" stroke-width="1"/>
+    </svg>`;
+  }
+
+  // === GAME FLOW ===
+  startBtn.addEventListener('click', () => {
+    ensureAudio();
+    intro.classList.add('hidden');
+    phase = 'ready';
+    readyPrompt.classList.add('active');
+  });
+
+  arena.addEventListener('click', (e) => {
+    if (phase === 'ready') {
+      startTrial();
+    }
+  });
+
+  function startTrial() {
+    readyPrompt.classList.remove('active');
+    phase = 'flash';
+    trialNum++;
+    trialEl.textContent = `TRIAL ${trialNum}`;
+
+    // Pick random vehicle & location
+    correctVehicle = Math.random() < 0.5 ? 'car' : 'truck';
+    correctLoc = Math.floor(Math.random() * 8);
+
+    // Build flash content
+    let html = '';
+
+    // Central vehicle
+    html += `<div class="central-object">${correctVehicle === 'car' ? svgCar() : svgTruck()}</div>`;
+
+    // Peripheral sign
+    const { x, y } = posToXY(POSITIONS[correctLoc], POS_RADIUS_PCT);
+    html += `<div class="peripheral-target" style="left:${x}%;top:${y}%">${svgSign()}</div>`;
+
+    // Distractors at harder levels
+    const distractorCount = Math.max(0, Math.floor((1000 - flashDuration) / 120));
+    if (distractorCount > 0) {
+      const usedLocs = new Set([correctLoc]);
+      for (let d = 0; d < Math.min(distractorCount, 6); d++) {
+        let dl;
+        do { dl = Math.floor(Math.random() * 8); } while (usedLocs.has(dl));
+        usedLocs.add(dl);
+        const dp = posToXY(POSITIONS[dl], POS_RADIUS_PCT + (Math.random() * 6 - 3));
+        const rot = Math.random() * 360;
+        html += `<div class="distractor" style="left:${dp.x}%;top:${dp.y}%">${svgDistractor(rot)}</div>`;
+      }
+    }
+
+    flashLayer.innerHTML = html;
+
+    // Show flash
+    sndFlash();
+    flashLayer.classList.add('visible');
+    arena.classList.add('flashing');
+
+    setTimeout(() => {
+      flashLayer.classList.remove('visible');
+      arena.classList.remove('flashing');
+
+      // short blank gap before question
+      setTimeout(() => {
+        phase = 'q1';
+        q1.classList.add('active');
+      }, 150);
+    }, flashDuration);
+  }
+
+  // Q1: Vehicle choice
+  q1.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      answeredVehicle = btn.dataset.answer;
+      q1.classList.remove('active');
+      setTimeout(() => {
+        phase = 'q2';
+        q2.classList.add('active');
+      }, 100);
+    });
+  });
+
+  // Q2: Location choice
+  function onLocAnswer(locIdx) {
+    if (phase !== 'q2') return;
+    q2.classList.remove('active');
+
+    const vehicleCorrect = answeredVehicle === correctVehicle;
+    const locCorrect = locIdx === correctLoc;
+    const bothCorrect = vehicleCorrect && locCorrect;
+
+    // Update score & difficulty
+    if (bothCorrect) {
+      score += 10 + Math.floor((3000 - flashDuration) / 50);
+      currentStreak++;
+      if (flashDuration > 1000) {
+        flashDuration -= 1000;
+      } else if (flashDuration > 500) {
+        flashDuration -= 200;
+      } else {
+        flashDuration = Math.max(10, flashDuration - 100);
+      }
+      sndCorrect();
+    } else if (vehicleCorrect || locCorrect) {
+      score += 3;
+      currentStreak = 0;
+      flashDuration = Math.min(3000, flashDuration + (flashDuration < 1000 ? 50 : 500));
+      sndPartial();
+    } else {
+      currentStreak = 0;
+      flashDuration = Math.min(3000, flashDuration + (flashDuration < 1000 ? 100 : 1000));
+      sndWrong();
+    }
+
+    // Update HUD
+    scoreEl.textContent = score;
+    speedEl.textContent = (flashDuration / 1000).toFixed(flashDuration >= 1000 ? 1 : 2) + 's';
+    streakEl.textContent = currentStreak;
+
+    // Show feedback
+    showFeedback(bothCorrect, vehicleCorrect, locCorrect);
+  }
+
+  function showFeedback(both, veh, loc) {
+    phase = 'feedback';
+    let cls, icon, text, detail;
+
+    if (both) {
+      cls = 'perfect'; icon = '\u2713'; text = 'PERFECT';
+      detail = 'Both correct!';
+    } else if (veh || loc) {
+      cls = 'partial'; icon = '~'; text = 'PARTIAL';
+      detail = veh ? 'Vehicle correct, location wrong' : 'Location correct, vehicle wrong';
+    } else {
+      cls = 'miss'; icon = '\u2717'; text = 'MISS';
+      detail = 'Both incorrect';
+    }
+
+    fbIcon.className = 'feedback-icon ' + cls;
+    fbIcon.textContent = icon;
+    fbText.className = 'feedback-text ' + cls;
+    fbText.textContent = text;
+    fbDetail.textContent = detail;
+    feedback.classList.add('active');
+
+    setTimeout(() => {
+      feedback.classList.remove('active');
+      setTimeout(() => {
+        phase = 'ready';
+        readyPrompt.classList.add('active');
+      }, 150);
+    }, 1100);
+  }
+
+  // === KEYBOARD SUPPORT ===
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'Enter') {
+      if (phase === 'intro') { startBtn.click(); e.preventDefault(); }
+      else if (phase === 'ready') { startTrial(); e.preventDefault(); }
+    }
+    if (phase === 'q1') {
+      if (e.key === '1' || e.key.toLowerCase() === 'c') {
+        q1.querySelector('[data-answer="car"]').click();
+      } else if (e.key === '2' || e.key.toLowerCase() === 't') {
+        q1.querySelector('[data-answer="truck"]').click();
+      }
+    }
+    if (phase === 'q2') {
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= 8) onLocAnswer(num - 1);
+    }
+  });
+})();
+</script>
+</body>
+</html>
