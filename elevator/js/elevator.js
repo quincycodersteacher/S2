@@ -58,6 +58,8 @@ class Elevator {
                     return floor.floorNumber;
                 }
             }
+            // no buttons pressed anywhere, stay on current floor
+            return this.currentFloor;
         }
         return this.queue.peek().destinationFloor; // get the destination floor of the next person in the queue
     }
