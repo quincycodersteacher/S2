@@ -1,5 +1,6 @@
 import { ElevatorQueue, FloorQueue } from './queue.js';
 import { ElevatorCanvas } from './elevatorcanvas.js';
+import { ElevatorConsole } from './elevatorconsole.js';
 
 class Person {
     constructor(name, originFloor, destinationFloor) {
@@ -217,18 +218,21 @@ class Simulation {
         this.numElevators = numElevators; // number of elevators in the building
         this.numFloors = numFloors; // number of floors in the building
         this.peoplePerSecond = peoplePerSecond; // number of people entering the building per second
-        this.timer = 0;
         // create the Building instance
         this.isRunning = false;
         this.intervalId = null; // to store the interval ID for pausing
         this.building = new Building(this.numElevators, this.numFloors);
+        this.renderers = [];
         if (canvas) {
-            this.renderer = new ElevatorCanvas(canvas);
+            this.renderers.push(new ElevatorCanvas(canvas));
         }
+        this.renderers.push(new ElevatorConsole());
     }
     set domStats(stats) {
-        if (this.renderer) {
-            this.renderer.domStats = stats;
+        for (let renderer of this.renderers) {
+            if (renderer.domStats !== undefined || renderer instanceof ElevatorCanvas) {
+                renderer.domStats = stats;
+            }
         }
     }
     step() {
@@ -241,8 +245,8 @@ class Simulation {
         // move elevators to their destination floors
         // load and unload people from the elevators
         this.building.moveElevatorsAndLoad();
-        if (this.renderer) {
-            this.renderer.render(this.building);
+        for (let renderer of this.renderers) {
+            renderer.render(this.building);
         }
     }
     toggleRun() {
@@ -263,25 +267,5 @@ class Simulation {
         }
         this.isRunning = false;
     }
-    animate() {
-        console.clear();
-        this.timer++;
-        for (let f = this.numFloors - 1; f >= 0; f--) {
-            let line = `Floor ${f}: `;
-            for (let e of this.building.elevators) {
-                if (e.currentFloor === f) {
-                    const dests = e.queue.people.map(p => p.destinationFloor).join(' ');
-                    line += `[${dests}] `;
-                } else {
-                    line += '[ ] ';
-                }
-            }
-            const floor = this.building.getFloor(f);
-            const dests = floor.queue.people.map(p => p.destinationFloor).join(' ');
-            line += `(${dests})`;
-            console.log(line);
-        }
-        console.log(`Timer: ${this.timer}`);
-    }
 }
-export { Simulation, Building, ElevatorCanvas };
+export { Simulation, Building, ElevatorCanvas, ElevatorConsole };
