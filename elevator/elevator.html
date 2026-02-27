@@ -7,7 +7,9 @@
     <title>VERTICAL TRANSIT SYSTEM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-deep: #0a0a0c;
@@ -47,13 +49,11 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(0, 0, 0, 0.15) 2px,
-                rgba(0, 0, 0, 0.15) 4px
-            );
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 0, 0, 0.15) 2px,
+                    rgba(0, 0, 0, 0.15) 4px);
             pointer-events: none;
             z-index: 1000;
         }
@@ -123,8 +123,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
         }
 
         .control-panel {
@@ -296,7 +303,7 @@
         </div>
 
         <div class="control-panel">
-            <button class="btn-run" onclick="run()" id="runBtn">
+            <button class="btn-run" id="runBtn">
                 Initialize
             </button>
             <div class="stat-group">
@@ -360,7 +367,7 @@
             btn.textContent = isRunning ? 'Pause' : 'Resume';
         }
 
-        window.run = run;
+        document.getElementById('runBtn').addEventListener('click', run);
     </script>
 </body>
 
