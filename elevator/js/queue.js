@@ -1,3 +1,8 @@
+/**
+ * A basic FIFO queue data structure for managing people.
+ * Uses an internal array (`people`) and provides standard queue operations.
+ * Serves as the base class for FloorQueue and ElevatorQueue.
+ */
 export class Queue {
     constructor() {
         this.people = [];
@@ -35,6 +40,12 @@ export class Queue {
     }
 }
 
+/**
+ * A specialized queue for building floors, extending Queue.
+ * Provides directional dequeue methods that remove the first person
+ * whose destination is above or below a given floor number.
+ * Used by Floor to manage people waiting for an elevator.
+ */
 export class FloorQueue extends Queue {
     dequeueNextWithDestinationAbove(floor) {
         if (!this.isEmpty()) {
@@ -61,6 +72,11 @@ export class FloorQueue extends Queue {
     }
 }
 
+/**
+ * A specialized queue for elevators, extending Queue.
+ * Overrides dequeue to remove the first person whose destination
+ * matches an exact floor number, used when unloading passengers.
+ */
 export class ElevatorQueue extends Queue {
     // Remove and return the first element from the queue
     dequeue(floor) {

@@ -2,6 +2,11 @@ import { ElevatorQueue, FloorQueue } from './queue.js';
 import { ElevatorCanvas } from './elevatorcanvas.js';
 import { ElevatorConsole } from './elevatorconsole.js';
 
+/**
+ * Represents an individual person in the simulation.
+ * Each person has a name, an origin floor, and a destination floor.
+ * Persons are held in FloorQueues while waiting and in ElevatorQueues while riding.
+ */
 class Person {
     constructor(name, originFloor, destinationFloor) {
         this.name = name; // in pounds
@@ -18,6 +23,13 @@ const DIRECTION = Object.freeze({
     DOWN: 200
 });
 
+/**
+ * Base class for elevators. Handles movement, passenger loading/unloading,
+ * and destination selection. Each elevator holds an ElevatorQueue of passengers,
+ * a reference to the building's floors, and tracks its current and destination floors.
+ * Movement is one floor per step, and only one action (move, unload, or load)
+ * occurs per call to moveAndLoad().
+ */
 class Elevator {
     constructor(capacity, floors) {
         this.capacity = capacity; // in number of people
@@ -129,12 +141,22 @@ class Elevator {
 
 }
 
+/**
+ * A standard elevator with a fixed capacity of 4 people.
+ * Extends Elevator with no additional behavior.
+ */
 class RegularElevator extends Elevator {
     constructor(floors) {
         super(4, floors); //4 person capacity
     }
 }
 
+/**
+ * Represents a single floor in the building. Manages a FloorQueue of
+ * waiting people and tracks whether the up/down call buttons are pressed.
+ * Button state is recalculated each step based on the destinations of
+ * people currently waiting on this floor.
+ */
 class Floor {
     constructor(floorNumber) {
         this.floorNumber = floorNumber; // floor number
@@ -165,6 +187,12 @@ class Floor {
     }
 }
 
+/**
+ * Represents the entire building containing floors and elevators.
+ * Creates Floor and RegularElevator instances on construction.
+ * Provides methods to advance all elevators one step and to
+ * randomly generate new people on floors.
+ */
 class Building {
     constructor(numElevators, numFloors) {
         this.numElevators = numElevators; // number of elevators in the building
@@ -213,6 +241,12 @@ class Building {
     }
 }
 
+/**
+ * Top-level simulation controller. Creates a Building and a set of renderers
+ * (ElevatorCanvas and ElevatorConsole), then runs a step loop on a 1-second
+ * interval. Each step generates new people, updates floor buttons, advances
+ * all elevators, and triggers rendering. Can be paused and resumed.
+ */
 class Simulation {
     constructor(numElevators, numFloors, peoplePerSecond, canvas) {
         this.numElevators = numElevators; // number of elevators in the building
