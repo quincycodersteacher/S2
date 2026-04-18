@@ -173,23 +173,36 @@
 
             pulse() {
                 if (this.isFinished) return "STASIS_ACTIVE";
-                
+
                 const sensors = this.getSensors();
-                const action = this.brain.calculateNextMove(sensors);
-                
+                const rawAction = this.brain.calculateNextMove(sensors);
+
+                const validDirs = Object.values(DIRECTION);
+                if (rawAction === undefined || rawAction === null) {
+                    console.warn("BRAIN_FAULT: calculateNextMove returned", rawAction,
+                        "— probably a typo like DIRECTION.down (lowercase) or a missing return statement.");
+                    return "BRAIN_FAULT: returned nothing — check for typos like DIRECTION.down vs DIRECTION.DOWN";
+                }
+                if (!validDirs.includes(rawAction)) {
+                    console.warn("BRAIN_FAULT: calculateNextMove must return one of DIRECTION.UP/DOWN/LEFT/RIGHT/STAY. Got:", rawAction);
+                    return `BRAIN_FAULT: not a DIRECTION (got ${typeof rawAction})`;
+                }
+
+                const action = rawAction;
                 const targetR = this.pPos.r + action.dr;
                 const targetC = this.pPos.c + action.dc;
                 const cell = this.grid[targetR] ? this.grid[targetR][targetC] : undefined;
 
-                if (cell !== undefined && cell !== MAZE.WALL) {
-                    this.grid[this.pPos.r][this.pPos.c] = MAZE.PATH;
-                    if (cell === MAZE.EXIT) this.isFinished = true;
-                    this.pPos = { r: targetR, c: targetC };
-                    this.grid[this.pPos.r][this.pPos.c] = MAZE.PLAYER;
-                    this.steps++;
-                    return `MOVED_${action.name}`;
-                }
-                return `COLLISION_${action.name}`;
+                if (action === DIRECTION.STAY) return "IDLE_STAY";
+                if (cell === undefined) return `REJECTED_${action.name}: off the grid`;
+                if (cell === MAZE.WALL) return `REJECTED_${action.name}: blocked by wall`;
+
+                this.grid[this.pPos.r][this.pPos.c] = MAZE.PATH;
+                if (cell === MAZE.EXIT) this.isFinished = true;
+                this.pPos = { r: targetR, c: targetC };
+                this.grid[this.pPos.r][this.pPos.c] = MAZE.PLAYER;
+                this.steps++;
+                return `MOVED_${action.name}`;
             }
 
             render() {
