@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze AI: Architect Edition</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>NEURAL_PATHFINDER_CORE</h1>
+
+        <div class="toolbar-group">
+            <label for="level-select">LEVEL</label>
+            <select id="level-select"></select>
+        </div>
+
+        <div class="toolbar-group">
+            <label for="size-select">SIZE</label>
+            <select id="size-select">
+                <option value="7">7&times;7</option>
+                <option value="11" selected>11&times;11</option>
+                <option value="15">15&times;15</option>
+                <option value="21">21&times;21</option>
+            </select>
+            <button id="btn-generate">Random Maze</button>
+        </div>
+
+        <div class="toolbar-group">
+            <button id="btn-test-all" class="primary">Test All</button>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="toolbar-group">
+            <kbd>SPACE</kbd> step &nbsp; <kbd>R</kbd> reset
+        </div>
+    </header>
+
+    <main>
+        <section class="pane editor-pane">
+            <div class="pane-header">
+                <span>&#x27A4; PlayerBrain.js</span>
+                <span>
+                    <button id="btn-reset-code" class="danger" style="padding:2px 8px; font-size:0.7rem;">Reset template</button>
+                    &nbsp;
+                    <span id="save-status" class="save-status">saved</span>
+                </span>
+            </div>
+            <div id="editor-host"></div>
+        </section>
+
+        <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" tabindex="0" title="Drag to resize"></div>
+
+        <section class="pane">
+            <div class="pane-header">
+                <span>&#x25A2; Maze &nbsp;&middot;&nbsp; <span id="val-level">Level 0</span></span>
+                <span style="font-size:0.7rem; color:var(--text-faint);">Best steps: <span id="val-best">&mdash;</span></span>
+            </div>
+            <div class="maze-pane-body">
+                <pre id="maze-display"></pre>
+
+                <div class="info-grid">
+                    <div class="label">SENSORS</div>
+                    <div class="label">STATE</div>
+                    <div class="value" id="val-sensors">&mdash;</div>
+                    <div class="value" id="val-status">READY</div>
+                    <div class="label">STEPS</div>
+                    <div class="label">&nbsp;</div>
+                    <div class="value" id="val-steps">0</div>
+                    <div class="value">&nbsp;</div>
+                </div>
+
+                <div id="error-box" class="error-box"></div>
+            </div>
+        </section>
+    </main>
+
+    <div class="status-bar">
+        <button id="btn-step">&#x25B6; Step</button>
+        <button id="btn-run" class="primary">&#x25B6;&#x25B6; Run</button>
+        <button id="btn-reset">&#x25A0; Reset</button>
+        <label for="speed-slider" style="color:var(--text-faint); font-size:0.75rem;">SPEED</label>
+        <input type="range" id="speed-slider" min="50" max="1000" step="50" value="150">
+        <span id="speed-label" style="color:var(--text-dim); font-size:0.75rem; min-width:55px;">150ms</span>
+        <div class="log">&rsaquo; <span id="log-line">READY</span></div>
+    </div>
+
+    <section id="test-panel" class="test-panel">
+        <h3>Test Results</h3>
+        <div id="test-grid" class="test-grid"></div>
+    </section>
+
+    <script type="module" src="js/app.js"></script>
+    <script src="js/splitter.js"></script>
+</body>
+</html>
